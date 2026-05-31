@@ -2,6 +2,7 @@
 
 import { ReactFlow } from "@xyflow/react";
 import { useShallow } from "zustand/react/shallow";
+import { nodeTypes } from "@/components/nodes";
 import { useBoardStore } from "@/lib/store";
 
 export function Board() {
@@ -21,6 +22,7 @@ export function Board() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
