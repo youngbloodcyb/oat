@@ -73,6 +73,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   nodes: [],
   edges: [],
   onNodesChange: (changes) => {
+    for (const c of changes) {
+      if (c.type !== "remove") continue;
+      const node = get().nodes.find((n) => n.id === c.id);
+      if (!node) continue;
+      if (node.data.kind === "image" || node.data.kind === "pdf") {
+        if (node.data.src.startsWith("blob:")) {
+          URL.revokeObjectURL(node.data.src);
+        }
+      }
+    }
     set({ nodes: applyNodeChanges(changes, get().nodes) });
   },
   onEdgesChange: (changes) => {
