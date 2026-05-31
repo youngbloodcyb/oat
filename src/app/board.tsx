@@ -1,0 +1,31 @@
+"use client";
+
+import { ReactFlow } from "@xyflow/react";
+import { useShallow } from "zustand/react/shallow";
+import { useBoardStore } from "@/lib/store";
+
+export function Board() {
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } =
+    useBoardStore(
+      useShallow((s) => ({
+        nodes: s.nodes,
+        edges: s.edges,
+        onNodesChange: s.onNodesChange,
+        onEdgesChange: s.onEdgesChange,
+        onConnect: s.onConnect,
+      })),
+    );
+
+  return (
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        fitView
+      />
+    </div>
+  );
+}
