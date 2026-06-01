@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Handle,
-  NodeResizer,
-  type NodeProps,
-  Position,
-} from "@xyflow/react";
+import { NodeResizer, type NodeProps } from "@xyflow/react";
 import type { ImageNode as ImageNodeType } from "@/lib/store";
 
 export function ImageNode({ data, selected }: NodeProps<ImageNodeType>) {
@@ -17,14 +12,12 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeType>) {
         minHeight={80}
         keepAspectRatio
       />
-      <Handle type="target" position={Position.Top} />
       <img
         src={data.src}
         alt={data.alt ?? ""}
         className="h-full w-full object-cover"
         draggable={false}
       />
-      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }

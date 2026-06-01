@@ -45,17 +45,13 @@ function isEditableTarget(el: EventTarget | null): boolean {
 }
 
 function BoardCanvas() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode } =
-    useBoardStore(
-      useShallow((s) => ({
-        nodes: s.nodes,
-        edges: s.edges,
-        onNodesChange: s.onNodesChange,
-        onEdgesChange: s.onEdgesChange,
-        onConnect: s.onConnect,
-        addNode: s.addNode,
-      })),
-    );
+  const { nodes, onNodesChange, addNode } = useBoardStore(
+    useShallow((s) => ({
+      nodes: s.nodes,
+      onNodesChange: s.onNodesChange,
+      addNode: s.addNode,
+    })),
+  );
   const { screenToFlowPosition } = useReactFlow();
 
   const viewportCenter = useCallback(
@@ -133,11 +129,8 @@ function BoardCanvas() {
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
         fitView
       />
     </div>

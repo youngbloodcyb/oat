@@ -1,6 +1,6 @@
 "use client";
 
-import { Handle, type NodeProps, Position } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
 import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
 
@@ -12,17 +12,12 @@ export function LinkNode({ id, data }: NodeProps<LinkNodeType>) {
     if (data.og || triedRef.current) return;
     triedRef.current = true;
 
-    const controller = new AbortController();
-    fetch(`/api/og?url=${encodeURIComponent(data.url)}`, {
-      signal: controller.signal,
-    })
+    fetch(`/api/og?url=${encodeURIComponent(data.url)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((og) => {
         if (og) updateNodeData<LinkNodeType["data"]>(id, { og });
       })
       .catch(() => {});
-
-    return () => controller.abort();
   }, [id, data.url, data.og, updateNodeData]);
 
   let host = data.url;
@@ -32,7 +27,6 @@ export function LinkNode({ id, data }: NodeProps<LinkNodeType>) {
 
   return (
     <div className="w-64 overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm">
-      <Handle type="target" position={Position.Top} />
       {data.og?.image && (
         <img
           src={data.og.image}
@@ -60,7 +54,6 @@ export function LinkNode({ id, data }: NodeProps<LinkNodeType>) {
           {data.og?.siteName ?? host}
         </a>
       </div>
-      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 }

@@ -1,10 +1,5 @@
 import {
-  addEdge,
-  applyEdgeChanges,
   applyNodeChanges,
-  type Connection,
-  type Edge,
-  type EdgeChange,
   type Node,
   type NodeChange,
   type XYPosition,
@@ -46,10 +41,7 @@ export type BoardNode = LinkNode | ImageNode | PdfNode;
 
 type BoardState = {
   nodes: BoardNode[];
-  edges: Edge[];
   onNodesChange: (changes: NodeChange<BoardNode>[]) => void;
-  onEdgesChange: (changes: EdgeChange[]) => void;
-  onConnect: (connection: Connection) => void;
   addNode: (data: BoardNodeData, position: XYPosition) => string;
   updateNodeData: <T extends BoardNodeData>(
     id: string,
@@ -71,7 +63,6 @@ const makeNode = (data: BoardNodeData, position: XYPosition): BoardNode => {
 
 export const useBoardStore = create<BoardState>((set, get) => ({
   nodes: [],
-  edges: [],
   onNodesChange: (changes) => {
     for (const c of changes) {
       if (c.type !== "remove") continue;
@@ -84,12 +75,6 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       }
     }
     set({ nodes: applyNodeChanges(changes, get().nodes) });
-  },
-  onEdgesChange: (changes) => {
-    set({ edges: applyEdgeChanges(changes, get().edges) });
-  },
-  onConnect: (connection) => {
-    set({ edges: addEdge(connection, get().edges) });
   },
   addNode: (data, position) => {
     const node = makeNode(data, position);
