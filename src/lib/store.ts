@@ -59,8 +59,7 @@ const makeNode = (data: BoardNodeData, position: XYPosition): BoardNode => {
         type: "link",
         position,
         data,
-        initialWidth: 256,
-        initialHeight: 280,
+        style: { width: 256, height: 280 },
       };
     case "image":
       return {
@@ -68,8 +67,7 @@ const makeNode = (data: BoardNodeData, position: XYPosition): BoardNode => {
         type: "image",
         position,
         data,
-        initialWidth: 240,
-        initialHeight: 240,
+        style: { width: 240, height: 240 },
       };
     case "pdf":
       return {
@@ -77,8 +75,7 @@ const makeNode = (data: BoardNodeData, position: XYPosition): BoardNode => {
         type: "pdf",
         position,
         data,
-        initialWidth: 320,
-        initialHeight: 400,
+        style: { width: 320, height: 400 },
       };
   }
 };
