@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+import "@xyflow/react/dist/style.css";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import "@xyflow/react/dist/style.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 

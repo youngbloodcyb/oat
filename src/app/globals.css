@@ -128,3 +128,9 @@
     @apply font-sans;
   }
 }
+
+.react-flow__node.draggable,
+.react-flow__node.draggable.dragging,
+.react-flow__node.selectable {
+  cursor: default;
+}

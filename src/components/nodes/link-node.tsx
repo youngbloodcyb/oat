@@ -3,8 +3,12 @@
 import type { NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
 import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 
-export function LinkNode({ id, data }: NodeProps<LinkNodeType>) {
+const selectedGlow =
+  "shadow-[0_0_0_2px_rgb(59_130_246),0_0_0_6px_rgb(59_130_246_/_0.25),0_0_28px_4px_rgb(59_130_246_/_0.5)]";
+
+export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   const updateNodeData = useBoardStore((s) => s.updateNodeData);
   const triedRef = useRef(false);
 
@@ -26,7 +30,12 @@ export function LinkNode({ id, data }: NodeProps<LinkNodeType>) {
   } catch {}
 
   return (
-    <div className="w-64 overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div
+      className={cn(
+        "w-64 overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow",
+        selected && selectedGlow,
+      )}
+    >
       {data.og?.image && (
         <img
           src={data.og.image}
@@ -49,7 +58,7 @@ export function LinkNode({ id, data }: NodeProps<LinkNodeType>) {
           href={data.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block truncate text-xs text-muted-foreground hover:text-foreground"
+          className="block cursor-pointer truncate text-xs text-muted-foreground hover:text-foreground"
         >
           {data.og?.siteName ?? host}
         </a>

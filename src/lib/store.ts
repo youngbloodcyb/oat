@@ -41,6 +41,7 @@ export type BoardNode = LinkNode | ImageNode | PdfNode;
 
 type BoardState = {
   nodes: BoardNode[];
+  selectedNode: BoardNode | null;
   onNodesChange: (changes: NodeChange<BoardNode>[]) => void;
   addNode: (data: BoardNodeData, position: XYPosition) => string;
   updateNodeData: <T extends BoardNodeData>(
@@ -63,6 +64,7 @@ const makeNode = (data: BoardNodeData, position: XYPosition): BoardNode => {
 
 export const useBoardStore = create<BoardState>((set, get) => ({
   nodes: [],
+  selectedNode: null,
   onNodesChange: (changes) => {
     for (const c of changes) {
       if (c.type !== "remove") continue;
@@ -74,7 +76,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         }
       }
     }
-    set({ nodes: applyNodeChanges(changes, get().nodes) });
+    const nodes = applyNodeChanges(changes, get().nodes);
+    const selectedNode = nodes.find((n) => n.selected) ?? null;
+    set(
+      selectedNode === get().selectedNode ? { nodes } : { nodes, selectedNode },
+    );
   },
   addNode: (data, position) => {
     const node = makeNode(data, position);
