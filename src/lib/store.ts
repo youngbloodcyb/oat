@@ -54,11 +54,32 @@ const makeNode = (data: BoardNodeData, position: XYPosition): BoardNode => {
   const id = crypto.randomUUID();
   switch (data.kind) {
     case "link":
-      return { id, type: "link", position, data };
+      return {
+        id,
+        type: "link",
+        position,
+        data,
+        initialWidth: 256,
+        initialHeight: 280,
+      };
     case "image":
-      return { id, type: "image", position, data };
+      return {
+        id,
+        type: "image",
+        position,
+        data,
+        initialWidth: 240,
+        initialHeight: 240,
+      };
     case "pdf":
-      return { id, type: "pdf", position, data };
+      return {
+        id,
+        type: "pdf",
+        position,
+        data,
+        initialWidth: 320,
+        initialHeight: 400,
+      };
   }
 };
 

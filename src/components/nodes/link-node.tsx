@@ -1,9 +1,17 @@
 "use client";
 
-import type { NodeProps } from "@xyflow/react";
+import { ArrowDownRightIcon } from "@phosphor-icons/react";
+import { NodeResizeControl, type NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
 import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+
+const resizeControlStyle = {
+  background: "transparent",
+  border: "none",
+  width: 32,
+  height: 32,
+};
 
 const selectedGlow =
   "shadow-[0_0_0_2px_rgb(59_130_246),0_0_0_6px_rgb(59_130_246_/_0.25),0_0_28px_4px_rgb(59_130_246_/_0.5)]";
@@ -32,16 +40,19 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   return (
     <div
       className={cn(
-        "w-64 overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow",
+        "relative h-full w-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow",
         selected && selectedGlow,
       )}
     >
+      <NodeResizeControl
+        style={resizeControlStyle}
+        minWidth={160}
+        minHeight={120}
+      >
+        <ArrowDownRightIcon size={12} className="text-muted-foreground" />
+      </NodeResizeControl>
       {data.og?.image && (
-        <img
-          src={data.og.image}
-          alt=""
-          className="h-32 w-full object-cover"
-        />
+        <img src={data.og.image} alt="" className="h-32 w-full object-cover" />
       )}
       <div className="space-y-1 p-3">
         {data.og?.title && (
