@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Background,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -121,6 +122,8 @@ function BoardCanvas() {
     [addNode, screenToFlowPosition],
   );
 
+  const proOptions = { hideAttribution: true };
+
   return (
     <div
       style={{ width: "100vw", height: "100vh" }}
@@ -132,7 +135,10 @@ function BoardCanvas() {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         fitView
-      />
+        proOptions={proOptions}
+      >
+        <Background gap={20} size={1} />
+      </ReactFlow>
     </div>
   );
 }
