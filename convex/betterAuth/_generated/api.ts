@@ -8,6 +8,9 @@
  * @module
  */
 
+import type * as adapter from "../adapter.js";
+import type * as auth from "../auth.js";
+
 import type {
   ApiFromModules,
   FilterApi,
@@ -15,7 +18,10 @@ import type {
 } from "convex/server";
 import { anyApi, componentsGeneric } from "convex/server";
 
-const fullApi: ApiFromModules<{}> = anyApi as any;
+const fullApi: ApiFromModules<{
+  adapter: typeof adapter;
+  auth: typeof auth;
+}> = anyApi as any;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
