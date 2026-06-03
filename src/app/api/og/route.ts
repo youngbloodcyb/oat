@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; BoardOGFetcher/1.0; +https://localhost)",
+          "Mozilla/5.0 (compatible; OatOGFetcher/1.0; +https://localhost)",
         Accept: "text/html,application/xhtml+xml",
       },
       redirect: "follow",
