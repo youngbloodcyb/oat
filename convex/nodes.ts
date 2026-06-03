@@ -1,12 +1,16 @@
 import { mutation, query } from "./_generated/server";
 import { v, type Infer } from "convex/values";
 import { authComponent } from "./betterAuth/auth";
-import { nodeData } from "./schema";
+import { nodeData, nodeType } from "./schema";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
-// Handy TS type for the node payload, derived from the validator.
+// Handy TS types derived from the validators (source of truth lives in schema).
 export type NodeData = Infer<typeof nodeData>;
+export type NodeType = Infer<typeof nodeType>;
+
+const position = v.object({ x: v.number(), y: v.number() });
+const style = v.object({ width: v.number(), height: v.number() });
 
 // Shared guard: ensures the signed-in user owns the given board.
 async function requireBoard(ctx: QueryCtx, boardId: Id<"boards">) {
@@ -31,22 +35,34 @@ export const listByBoard = query({
 });
 
 export const create = mutation({
-  args: { boardId: v.id("boards"), data: nodeData },
-  handler: async (ctx, { boardId, data }) => {
+  args: {
+    boardId: v.id("boards"),
+    type: nodeType,
+    position,
+    data: nodeData,
+    style: v.optional(style),
+  },
+  handler: async (ctx, { boardId, ...node }) => {
     const { user } = await requireBoard(ctx, boardId);
-    return await ctx.db.insert("nodes", { boardId, userId: user._id, data });
+    return await ctx.db.insert("nodes", { boardId, userId: user._id, ...node });
   },
 });
 
+// Patch any subset of the persisted fields. `data` is replaced wholesale
+// (a discriminated union can't be safely partial-patched); `position` and
+// `style` can be updated independently, e.g. on drag/resize.
 export const update = mutation({
-  args: { nodeId: v.id("nodes"), data: nodeData },
-  handler: async (ctx, { nodeId, data }) => {
+  args: {
+    nodeId: v.id("nodes"),
+    position: v.optional(position),
+    data: v.optional(nodeData),
+    style: v.optional(style),
+  },
+  handler: async (ctx, { nodeId, ...patch }) => {
     const user = await authComponent.getAuthUser(ctx);
     const node = await ctx.db.get(nodeId);
     if (!node || node.userId !== user._id) throw new Error("Node not found");
-    // Replace the whole payload. Use ctx.db.patch with a partial if you'd
-    // rather merge top-level keys instead of overwriting.
-    await ctx.db.patch(nodeId, { data });
+    await ctx.db.patch(nodeId, patch);
   },
 });
 

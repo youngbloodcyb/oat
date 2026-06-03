@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownRightIcon } from "@phosphor-icons/react";
+import { ResizeIcon } from "@phosphor-icons/react";
 import { NodeResizeControl, type NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
 import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
@@ -49,7 +49,7 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
         minWidth={160}
         minHeight={120}
       >
-        <ArrowDownRightIcon size={12} className="text-muted-foreground" />
+        <ResizeIcon size={12} className="text-muted-foreground" />
       </NodeResizeControl>
       {data.og?.image && (
         <img src={data.og.image} alt="" className="h-32 w-full object-cover" />

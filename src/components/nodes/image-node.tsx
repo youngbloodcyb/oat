@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownRightIcon } from "@phosphor-icons/react";
+import { ResizeIcon } from "@phosphor-icons/react";
 import { NodeResizeControl, type NodeProps } from "@xyflow/react";
 import type { ImageNode as ImageNodeType } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeType>) {
         minHeight={80}
         keepAspectRatio
       >
-        <ArrowDownRightIcon size={12} className="text-muted-foreground" />
+        <ResizeIcon size={12} className="text-muted-foreground" />
       </NodeResizeControl>
       <img
         src={data.src}

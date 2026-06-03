@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownRightIcon } from "@phosphor-icons/react";
+import { ResizeIcon } from "@phosphor-icons/react";
 import { NodeResizeControl, type NodeProps } from "@xyflow/react";
 import type { PdfNode as PdfNodeType } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,7 @@ export function PdfNode({ data, selected }: NodeProps<PdfNodeType>) {
         minWidth={200}
         minHeight={200}
       >
-        <ArrowDownRightIcon size={12} className="text-muted-foreground" />
+        <ResizeIcon size={12} className="text-muted-foreground" />
       </NodeResizeControl>
       <div className="truncate border-b bg-muted px-3 py-2 text-xs font-medium">
         {data.name}
