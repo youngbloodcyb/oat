@@ -1,35 +1,17 @@
 "use client";
 
-import { ResizeIcon } from "@phosphor-icons/react";
-import { NodeResizeControl, type NodeProps } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
+import { NodeShell } from "@/components/nodes/node-shell";
 import type { PdfNode as PdfNodeType } from "@/lib/store";
-import { cn } from "@/lib/utils";
-
-const selectedGlow =
-  "shadow-[0_0_0_2px_rgb(59_130_246),0_0_0_6px_rgb(59_130_246_/_0.25),0_0_28px_4px_rgb(59_130_246_/_0.5)]";
-
-const resizeControlStyle = {
-  background: "transparent",
-  border: "none",
-  width: 32,
-  height: 32,
-};
 
 export function PdfNode({ data, selected }: NodeProps<PdfNodeType>) {
   return (
-    <div
-      className={cn(
-        "relative flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow",
-        selected && selectedGlow,
-      )}
+    <NodeShell
+      selected={selected}
+      minWidth={200}
+      minHeight={200}
+      className="flex flex-col"
     >
-      <NodeResizeControl
-        style={resizeControlStyle}
-        minWidth={200}
-        minHeight={200}
-      >
-        <ResizeIcon size={12} className="text-muted-foreground" />
-      </NodeResizeControl>
       <div className="truncate border-b bg-muted px-3 py-2 text-xs font-medium">
         {data.name}
       </div>
@@ -38,6 +20,6 @@ export function PdfNode({ data, selected }: NodeProps<PdfNodeType>) {
         type="application/pdf"
         className="nodrag flex-1 bg-white"
       />
-    </div>
+    </NodeShell>
   );
 }

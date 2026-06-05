@@ -1,21 +1,10 @@
 "use client";
 
-import { ResizeIcon } from "@phosphor-icons/react";
-import { NodeResizeControl, type NodeProps } from "@xyflow/react";
+import type { NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
+import { NodeShell } from "@/components/nodes/node-shell";
 import { useUpdateNodeData } from "@/hooks/use-board-actions";
 import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
-
-const resizeControlStyle = {
-  background: "transparent",
-  border: "none",
-  width: 32,
-  height: 32,
-};
-
-const selectedGlow =
-  "shadow-[0_0_0_2px_rgb(59_130_246),0_0_0_6px_rgb(59_130_246_/_0.25),0_0_28px_4px_rgb(59_130_246_/_0.5)]";
 
 export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   const updateNodeData = useBoardStore((s) => s.updateNodeData);
@@ -42,19 +31,7 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   } catch {}
 
   return (
-    <div
-      className={cn(
-        "relative h-full w-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow",
-        selected && selectedGlow,
-      )}
-    >
-      <NodeResizeControl
-        style={resizeControlStyle}
-        minWidth={160}
-        minHeight={120}
-      >
-        <ResizeIcon size={12} className="text-muted-foreground" />
-      </NodeResizeControl>
+    <NodeShell selected={selected} minWidth={160} minHeight={120}>
       {data.og?.image && (
         <img src={data.og.image} alt="" className="h-32 w-full object-cover" />
       )}
@@ -78,6 +55,6 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
           {data.og?.siteName ?? host}
         </a>
       </div>
-    </div>
+    </NodeShell>
   );
 }
