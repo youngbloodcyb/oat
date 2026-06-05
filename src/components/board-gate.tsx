@@ -4,6 +4,7 @@ import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 
 import { Board } from "@/app/board";
 import { AuthForm } from "@/components/auth-form";
+import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
@@ -11,9 +12,7 @@ export function BoardGate() {
   return (
     <>
       <AuthLoading>
-        <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-          Loading…
-        </div>
+        <Loading />
       </AuthLoading>
 
       <Unauthenticated>
