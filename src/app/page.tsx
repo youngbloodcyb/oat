@@ -1,10 +1,5 @@
-import Image from "next/image";
-import { Board } from "./board";
+import { BoardGate } from "@/components/board-gate";
 
 export default function Home() {
-  return (
-    <div className="flex items-center justify-center">
-      <Board />
-    </div>
-  );
+  return <BoardGate />;
 }
