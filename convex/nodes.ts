@@ -2,7 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v, type Infer } from "convex/values";
 import { authComponent } from "./betterAuth/auth";
 import { nodeData, nodeType } from "./schema";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
 // Handy TS types derived from the validators (source of truth lives in schema).
@@ -20,6 +20,29 @@ async function requireBoard(ctx: QueryCtx, boardId: Id<"boards">) {
   return { user, board };
 }
 
+// Resolve the STORED node data into the shape the client renders: image/pdf
+// `storageId | url` collapse into a single `src` URL. Links pass through.
+async function toClientData(ctx: QueryCtx, data: Doc<"nodes">["data"]) {
+  if (data.kind === "image" || data.kind === "pdf") {
+    const src = data.storageId
+      ? ((await ctx.storage.getUrl(data.storageId)) ?? "")
+      : (data.url ?? "");
+    return data.kind === "image"
+      ? { kind: "image" as const, src, alt: data.alt }
+      : { kind: "pdf" as const, src, name: data.name };
+  }
+  return data; // link
+}
+
+// A signed URL the client POSTs file bytes to before creating a file node.
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await authComponent.getAuthUser(ctx); // require a signed-in user
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 export const listByBoard = query({
   args: { boardId: v.id("boards") },
   handler: async (ctx, { boardId }) => {
@@ -27,10 +50,19 @@ export const listByBoard = query({
     if (!user) return [];
     const board = await ctx.db.get(boardId);
     if (!board || board.userId !== user._id) return [];
-    return await ctx.db
+    const nodes = await ctx.db
       .query("nodes")
       .withIndex("by_board", (q) => q.eq("boardId", boardId))
       .collect();
+    return await Promise.all(
+      nodes.map(async (n) => ({
+        _id: n._id,
+        type: n.type,
+        position: n.position,
+        style: n.style,
+        data: await toClientData(ctx, n.data),
+      })),
+    );
   },
 });
 
@@ -72,6 +104,13 @@ export const remove = mutation({
     const user = await authComponent.getAuthUser(ctx);
     const node = await ctx.db.get(nodeId);
     if (!node || node.userId !== user._id) throw new Error("Node not found");
+    // Clean up the backing file so deleting a node doesn't orphan storage.
+    if (
+      (node.data.kind === "image" || node.data.kind === "pdf") &&
+      node.data.storageId
+    ) {
+      await ctx.storage.delete(node.data.storageId);
+    }
     await ctx.db.delete(nodeId);
   },
 });

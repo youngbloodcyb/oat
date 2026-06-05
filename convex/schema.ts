@@ -1,10 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// Discriminated union for node payloads — the source of truth for node
-// shape. Each branch is tagged by `kind`, so reads narrow correctly and
-// every write is validated at runtime. The client imports the generated
-// type (Infer<typeof nodeData>) instead of hand-defining these.
+// The STORED node payload — source of truth for what lives in the DB. Note
+// image/pdf reference content by either `storageId` (a file uploaded to
+// Convex storage) or an external `url`. The query resolves whichever is set
+// into a `src` URL for the client (see nodes.listByBoard), so the shape the
+// UI consumes differs slightly from what's stored here.
 export const nodeData = v.union(
   v.object({
     kind: v.literal("link"),
@@ -20,12 +21,14 @@ export const nodeData = v.union(
   }),
   v.object({
     kind: v.literal("image"),
-    src: v.string(),
+    storageId: v.optional(v.id("_storage")),
+    url: v.optional(v.string()),
     alt: v.optional(v.string()),
   }),
   v.object({
     kind: v.literal("pdf"),
-    src: v.string(),
+    storageId: v.optional(v.id("_storage")),
+    url: v.optional(v.string()),
     name: v.string(),
   }),
 );

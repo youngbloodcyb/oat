@@ -3,6 +3,7 @@
 import { ResizeIcon } from "@phosphor-icons/react";
 import { NodeResizeControl, type NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
+import { useUpdateNodeData } from "@/hooks/use-board-actions";
 import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ const selectedGlow =
 
 export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   const updateNodeData = useBoardStore((s) => s.updateNodeData);
+  const persistNodeData = useUpdateNodeData();
   const triedRef = useRef(false);
 
   useEffect(() => {
@@ -27,10 +29,12 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
     fetch(`/api/og?url=${encodeURIComponent(data.url)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((og) => {
-        if (og) updateNodeData<LinkNodeType["data"]>(id, { og });
+        if (!og) return;
+        updateNodeData<LinkNodeType["data"]>(id, { og }); // instant, local
+        persistNodeData(id, { kind: "link", url: data.url, og }); // to Convex
       })
       .catch(() => {});
-  }, [id, data.url, data.og, updateNodeData]);
+  }, [id, data.url, data.og, updateNodeData, persistNodeData]);
 
   let host = data.url;
   try {

@@ -1,6 +1,13 @@
-import { type BoardNodeData } from "@/lib/store";
+// A pending node detected from paste/drop input, before it's persisted.
+// File-backed drafts carry the raw File so the action layer can upload its
+// bytes to Convex storage; URL-backed drafts are stored as-is.
+export type NodeDraft =
+  | { kind: "link"; url: string }
+  | { kind: "image"; file: File; alt: string }
+  | { kind: "pdf"; file: File; name: string }
+  | { kind: "pdf"; url: string; name: string };
 
-export function detectFromText(text: string): BoardNodeData | null {
+export function detectFromText(text: string): NodeDraft | null {
   let parsed: URL;
   try {
     parsed = new URL(text.trim());
@@ -12,17 +19,17 @@ export function detectFromText(text: string): BoardNodeData | null {
     const name = decodeURIComponent(
       parsed.pathname.split("/").pop() || parsed.href,
     );
-    return { kind: "pdf", src: parsed.href, name };
+    return { kind: "pdf", url: parsed.href, name };
   }
   return { kind: "link", url: parsed.href };
 }
 
-export function detectFromFile(file: File): BoardNodeData | null {
+export function detectFromFile(file: File): NodeDraft | null {
   if (file.type.startsWith("image/")) {
-    return { kind: "image", src: URL.createObjectURL(file), alt: file.name };
+    return { kind: "image", file, alt: file.name };
   }
   if (file.type === "application/pdf") {
-    return { kind: "pdf", src: URL.createObjectURL(file), name: file.name };
+    return { kind: "pdf", file, name: file.name };
   }
   return null;
 }

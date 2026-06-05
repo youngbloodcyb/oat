@@ -5,10 +5,11 @@ import {
   detectFromText,
   isEditableTarget,
 } from "@/lib/board-utils";
-import { useBoardStore } from "@/lib/store";
+import { useBoardActions } from "@/hooks/use-board-actions";
+import type { Id } from "../../convex/_generated/dataModel";
 
-export function useCanvasInputs() {
-  const addNode = useBoardStore((s) => s.addNode);
+export function useCanvasInputs(boardId: Id<"boards">) {
+  const { addDraft } = useBoardActions(boardId);
   const { screenToFlowPosition } = useReactFlow();
 
   const viewportCenter = useCallback(
@@ -30,25 +31,25 @@ export function useCanvasInputs() {
         if (item.kind !== "file") continue;
         const file = item.getAsFile();
         if (!file) continue;
-        const nodeData = detectFromFile(file);
-        if (nodeData) {
+        const draft = detectFromFile(file);
+        if (draft) {
           e.preventDefault();
-          addNode(nodeData, viewportCenter());
+          addDraft(draft, viewportCenter());
           return;
         }
       }
 
       const text = data.getData("text/plain");
       if (!text) return;
-      const nodeData = detectFromText(text);
-      if (nodeData) {
+      const draft = detectFromText(text);
+      if (draft) {
         e.preventDefault();
-        addNode(nodeData, viewportCenter());
+        addDraft(draft, viewportCenter());
       }
     };
     window.addEventListener("paste", handler);
     return () => window.removeEventListener("paste", handler);
-  }, [addNode, viewportCenter]);
+  }, [addDraft, viewportCenter]);
 
   const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -61,8 +62,8 @@ export function useCanvasInputs() {
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
 
       for (const file of Array.from(e.dataTransfer.files)) {
-        const nodeData = detectFromFile(file);
-        if (nodeData) addNode(nodeData, position);
+        const draft = detectFromFile(file);
+        if (draft) addDraft(draft, position);
       }
 
       const uriList = e.dataTransfer.getData("text/uri-list");
@@ -70,12 +71,12 @@ export function useCanvasInputs() {
         for (const line of uriList.split("\n")) {
           const trimmed = line.trim();
           if (!trimmed || trimmed.startsWith("#")) continue;
-          const nodeData = detectFromText(trimmed);
-          if (nodeData) addNode(nodeData, position);
+          const draft = detectFromText(trimmed);
+          if (draft) addDraft(draft, position);
         }
       }
     },
-    [addNode, screenToFlowPosition],
+    [addDraft, screenToFlowPosition],
   );
 
   return { onDragOver, onDrop };
