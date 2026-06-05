@@ -49,10 +49,14 @@ export const toBoardNode = (doc: ClientNode): BoardNode =>
 
 type BoardState = {
   nodes: BoardNode[];
+  // Which board `nodes` currently belongs to. Lets the canvas avoid rendering
+  // a previous board's nodes while a new board's query is still loading.
+  nodesBoardId: string | null;
   selectedNode: BoardNode | null;
-  // Replace local nodes with the latest server snapshot, preserving transient
-  // React Flow UI state (selection, in-flight drag, measurements).
-  setNodes: (incoming: BoardNode[]) => void;
+  // Replace local nodes with the latest server snapshot for `boardId`,
+  // preserving transient React Flow UI state (selection, in-flight drag,
+  // measurements) only when staying on the same board.
+  setNodes: (boardId: string, incoming: BoardNode[]) => void;
   onNodesChange: (changes: NodeChange<BoardNode>[]) => void;
   // Local, optimistic data merge (persisted separately via a mutation).
   updateNodeData: <T extends BoardNodeData>(id: string, patch: Partial<T>) => void;
@@ -60,11 +64,17 @@ type BoardState = {
 
 export const useBoardStore = create<BoardState>((set, get) => ({
   nodes: [],
+  nodesBoardId: null,
   selectedNode: null,
-  setNodes: (incoming) => {
-    const prev = new Map(get().nodes.map((n) => [n.id, n]));
+  setNodes: (boardId, incoming) => {
+    // Only carry over UI state when we're refreshing the same board; switching
+    // boards must replace wholesale so nothing stale leaks across.
+    const sameBoard = get().nodesBoardId === boardId;
+    const prev = sameBoard
+      ? new Map(get().nodes.map((n) => [n.id, n]))
+      : null;
     const nodes = incoming.map((n) => {
-      const old = prev.get(n.id);
+      const old = prev?.get(n.id);
       if (!old) return n;
       return {
         ...old,
@@ -78,7 +88,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       } as BoardNode;
     });
     const selectedNode = nodes.find((n) => n.selected) ?? null;
-    set({ nodes, selectedNode });
+    set({ nodes, selectedNode, nodesBoardId: boardId });
   },
   onNodesChange: (changes) => {
     const nodes = applyNodeChanges(changes, get().nodes);

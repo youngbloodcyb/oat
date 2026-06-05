@@ -15,8 +15,11 @@ export function useBoardSync(boardId: Id<"boards">) {
 
   useEffect(() => {
     if (!remote) return;
-    setNodes(remote.map(toBoardNode));
-  }, [remote, setNodes]);
+    setNodes(boardId, remote.map(toBoardNode));
+  }, [remote, boardId, setNodes]);
 
-  return remote === undefined; // loading
+  // Ready only once the store actually holds THIS board's nodes. On a board
+  // switch the store still tags the previous board, so this stays false until
+  // the effect above runs — preventing a flash of the old board.
+  return useBoardStore((s) => s.nodesBoardId === boardId);
 }

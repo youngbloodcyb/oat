@@ -23,7 +23,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 const proOptions = { hideAttribution: true };
 
 function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
-  useBoardSync(boardId);
+  const ready = useBoardSync(boardId);
   const { moveNode, removeNode, resizeNode } = useBoardActions(boardId);
   const { nodes, onNodesChange: applyChanges } = useBoardStore(
     useShallow((s) => ({ nodes: s.nodes, onNodesChange: s.onNodesChange })),
@@ -53,6 +53,10 @@ function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
     },
     [applyChanges, removeNode, resizeNode],
   );
+
+  // Hold the canvas until the store holds this board's nodes, so we never
+  // paint the previously-open board while the new one is loading.
+  if (!ready) return <Loading />;
 
   return (
     <div
