@@ -2,9 +2,9 @@ import type { XYPosition } from "@xyflow/react";
 import { useMutation } from "convex/react";
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
-import type { NodeData, NodeType } from "../../convex/nodes";
+import { api } from "~/_generated/api";
+import type { Id } from "~/_generated/dataModel";
+import type { NodeData, NodeType } from "~/nodes";
 import type { NodeDraft } from "@/lib/board-utils";
 import { DEFAULT_STYLE } from "@/lib/store";
 
@@ -53,7 +53,11 @@ export function useBoardActions(boardId: Id<"boards">) {
         { boardId },
         cur.map((n) =>
           n._id === nodeId
-            ? { ...n, style: style ?? n.style, position: position ?? n.position }
+            ? {
+                ...n,
+                style: style ?? n.style,
+                position: position ?? n.position,
+              }
             : n,
         ),
       );
@@ -94,10 +98,18 @@ export function useBoardActions(boardId: Id<"boards">) {
         case "link":
           return { kind: "link", url: draft.url };
         case "image":
-          return { kind: "image", storageId: await upload(draft.file), alt: draft.alt };
+          return {
+            kind: "image",
+            storageId: await upload(draft.file),
+            alt: draft.alt,
+          };
         case "pdf":
           return "file" in draft
-            ? { kind: "pdf", storageId: await upload(draft.file), name: draft.name }
+            ? {
+                kind: "pdf",
+                storageId: await upload(draft.file),
+                name: draft.name,
+              }
             : { kind: "pdf", url: draft.url, name: draft.name };
       }
     },
