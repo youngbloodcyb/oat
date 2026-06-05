@@ -20,19 +20,34 @@ const proOptions = { hideAttribution: true };
 
 function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
   useBoardSync(boardId);
-  const { moveNode, removeNode } = useBoardActions(boardId);
+  const { moveNode, removeNode, resizeNode } = useBoardActions(boardId);
   const { nodes, onNodesChange: applyChanges } = useBoardStore(
     useShallow((s) => ({ nodes: s.nodes, onNodesChange: s.onNodesChange })),
   );
   const { onDragOver, onDrop } = useCanvasInputs(boardId);
 
-  // Apply changes locally for smooth interaction, and persist removals.
+  // Apply changes locally for smooth interaction, then persist the ones that
+  // represent a committed edit: removals and finished resizes.
   const onNodesChange = useCallback(
     (changes: NodeChange<BoardNode>[]) => {
       applyChanges(changes);
-      for (const c of changes) if (c.type === "remove") removeNode(c.id);
+      for (const c of changes) {
+        if (c.type === "remove") {
+          removeNode(c.id);
+        } else if (c.type === "dimensions" && c.resizing === false) {
+          // Resize finished — read the settled node and persist its size
+          // (and position, since corner handles can shift it).
+          const node = useBoardStore.getState().nodes.find((n) => n.id === c.id);
+          const width = c.dimensions?.width ?? node?.width ?? node?.measured?.width;
+          const height =
+            c.dimensions?.height ?? node?.height ?? node?.measured?.height;
+          if (node && width && height) {
+            resizeNode(c.id, { width, height }, node.position);
+          }
+        }
+      }
     },
-    [applyChanges, removeNode],
+    [applyChanges, removeNode, resizeNode],
   );
 
   return (

@@ -44,6 +44,22 @@ export function useBoardActions(boardId: Id<"boards">) {
 
   const update = useMutation(api.nodes.update);
 
+  const resize = useMutation(api.nodes.update).withOptimisticUpdate(
+    (localStore, { nodeId, style, position }) => {
+      const cur = localStore.getQuery(api.nodes.listByBoard, { boardId });
+      if (!cur) return;
+      localStore.setQuery(
+        api.nodes.listByBoard,
+        { boardId },
+        cur.map((n) =>
+          n._id === nodeId
+            ? { ...n, style: style ?? n.style, position: position ?? n.position }
+            : n,
+        ),
+      );
+    },
+  );
+
   const destroy = useMutation(api.nodes.remove).withOptimisticUpdate(
     (localStore, { nodeId }) => {
       const cur = localStore.getQuery(api.nodes.listByBoard, { boardId });
@@ -123,5 +139,14 @@ export function useBoardActions(boardId: Id<"boards">) {
     [update],
   );
 
-  return { addDraft, moveNode, removeNode, setNodeData };
+  const resizeNode = useCallback(
+    (
+      nodeId: string,
+      style: { width: number; height: number },
+      position?: XYPosition,
+    ) => resize({ nodeId: nodeId as Id<"nodes">, style, position }),
+    [resize],
+  );
+
+  return { addDraft, moveNode, removeNode, setNodeData, resizeNode };
 }
