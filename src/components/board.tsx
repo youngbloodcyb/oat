@@ -6,14 +6,18 @@ import {
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
+import { useQuery } from "convex/react";
+import Link from "next/link";
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { nodeTypes } from "@/components/nodes";
 import { Loading } from "@/components/loading";
+import { nodeTypes } from "@/components/nodes";
+import { Button } from "@/components/ui/button";
 import { useBoardActions } from "@/hooks/use-board-actions";
-import { useBoardSync, useDefaultBoard } from "@/hooks/use-board-sync";
+import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
 import { type BoardNode, useBoardStore } from "@/lib/store";
+import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
 const proOptions = { hideAttribution: true };
@@ -72,11 +76,27 @@ function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
   );
 }
 
-export function Board() {
-  const boardId = useDefaultBoard();
-  if (!boardId) return <Loading />;
+function BoardNotFound() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+      <p className="text-muted-foreground">This board doesn&rsquo;t exist.</p>
+      <Button asChild variant="outline">
+        <Link href="/">Back to boards</Link>
+      </Button>
+    </div>
+  );
+}
+
+export function Board({ boardId }: { boardId: Id<"boards"> }) {
+  // Verifies access too: boards.get returns null for missing/unowned boards.
+  const board = useQuery(api.boards.get, { boardId });
+  if (board === undefined) return <Loading />;
+  if (board === null) return <BoardNotFound />;
   return (
     <ReactFlowProvider>
+      <Button asChild variant="outline" size="sm" className="fixed top-4 left-4 z-50">
+        <Link href="/">← Boards</Link>
+      </Button>
       <BoardCanvas boardId={boardId} />
     </ReactFlowProvider>
   );

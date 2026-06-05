@@ -2,13 +2,13 @@
 
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 
-import { Board } from "@/app/board";
 import { AuthForm } from "@/components/auth-form";
 import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-export function BoardGate() {
+/** Gates everything in the (app) route group behind auth. */
+export function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AuthLoading>
@@ -22,12 +22,12 @@ export function BoardGate() {
       </Unauthenticated>
 
       <Authenticated>
-        <Board />
+        {children}
         <Button
           variant="outline"
           size="sm"
           onClick={() => authClient.signOut()}
-          className="fixed top-4 right-4 z-10"
+          className="fixed top-4 right-4 z-50"
         >
           Sign out
         </Button>
