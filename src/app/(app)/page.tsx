@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui/button";
-import { api } from "../../../convex/_generated/api";
+import { api } from "~/_generated/api";
 
 export default function BoardsPage() {
   const boards = useQuery(api.boards.list);

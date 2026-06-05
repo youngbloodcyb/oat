@@ -17,8 +17,8 @@ import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
 import { type BoardNode, useBoardStore } from "@/lib/store";
-import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
+import { api } from "~/_generated/api";
+import type { Id } from "~/_generated/dataModel";
 
 const proOptions = { hideAttribution: true };
 
@@ -41,8 +41,11 @@ function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
         } else if (c.type === "dimensions" && c.resizing === false) {
           // Resize finished — read the settled node and persist its size
           // (and position, since corner handles can shift it).
-          const node = useBoardStore.getState().nodes.find((n) => n.id === c.id);
-          const width = c.dimensions?.width ?? node?.width ?? node?.measured?.width;
+          const node = useBoardStore
+            .getState()
+            .nodes.find((n) => n.id === c.id);
+          const width =
+            c.dimensions?.width ?? node?.width ?? node?.measured?.width;
           const height =
             c.dimensions?.height ?? node?.height ?? node?.measured?.height;
           if (node && width && height) {
@@ -98,7 +101,12 @@ export function Board({ boardId }: { boardId: Id<"boards"> }) {
   if (board === null) return <BoardNotFound />;
   return (
     <ReactFlowProvider>
-      <Button asChild variant="outline" size="sm" className="fixed top-4 left-4 z-50">
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="fixed top-4 left-4 z-50"
+      >
         <Link href="/">← Boards</Link>
       </Button>
       <BoardCanvas boardId={boardId} />

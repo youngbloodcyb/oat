@@ -1,5 +1,5 @@
 import { Board } from "@/components/board";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import type { Id } from "~/_generated/dataModel";
 
 export default async function BoardPage({
   params,

@@ -1,11 +1,7 @@
-import {
-  applyNodeChanges,
-  type Node,
-  type NodeChange,
-} from "@xyflow/react";
+import { applyNodeChanges, type Node, type NodeChange } from "@xyflow/react";
 import type { FunctionReturnType } from "convex/server";
 import { create } from "zustand";
-import type { api } from "../../convex/_generated/api";
+import type { api } from "~/_generated/api";
 
 // Convex is the source of truth. These types are derived from what
 // `nodes.listByBoard` returns — i.e. the resolved client view, where image/pdf
@@ -59,7 +55,10 @@ type BoardState = {
   setNodes: (boardId: string, incoming: BoardNode[]) => void;
   onNodesChange: (changes: NodeChange<BoardNode>[]) => void;
   // Local, optimistic data merge (persisted separately via a mutation).
-  updateNodeData: <T extends BoardNodeData>(id: string, patch: Partial<T>) => void;
+  updateNodeData: <T extends BoardNodeData>(
+    id: string,
+    patch: Partial<T>,
+  ) => void;
 };
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -70,9 +69,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     // Only carry over UI state when we're refreshing the same board; switching
     // boards must replace wholesale so nothing stale leaks across.
     const sameBoard = get().nodesBoardId === boardId;
-    const prev = sameBoard
-      ? new Map(get().nodes.map((n) => [n.id, n]))
-      : null;
+    const prev = sameBoard ? new Map(get().nodes.map((n) => [n.id, n])) : null;
     const nodes = incoming.map((n) => {
       const old = prev?.get(n.id);
       if (!old) return n;
@@ -100,7 +97,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   updateNodeData: (id, patch) => {
     set({
       nodes: get().nodes.map((n) =>
-        n.id === id ? ({ ...n, data: { ...n.data, ...patch } } as BoardNode) : n,
+        n.id === id
+          ? ({ ...n, data: { ...n.data, ...patch } } as BoardNode)
+          : n,
       ),
     });
   },

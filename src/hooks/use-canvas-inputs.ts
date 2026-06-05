@@ -6,7 +6,7 @@ import {
   isEditableTarget,
 } from "@/lib/board-utils";
 import { useBoardActions } from "@/hooks/use-board-actions";
-import type { Id } from "../../convex/_generated/dataModel";
+import type { Id } from "~/_generated/dataModel";
 
 export function useCanvasInputs(boardId: Id<"boards">) {
   const { addDraft } = useBoardActions(boardId);
