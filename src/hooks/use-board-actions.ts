@@ -97,6 +97,8 @@ export function useBoardActions(boardId: Id<"boards">) {
       switch (draft.kind) {
         case "link":
           return { kind: "link", url: draft.url };
+        case "text":
+          return { kind: "text", text: draft.text };
         case "image":
           return {
             kind: "image",

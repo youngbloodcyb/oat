@@ -20,6 +20,10 @@ export const nodeData = v.union(
     ),
   }),
   v.object({
+    kind: v.literal("text"),
+    text: v.string(),
+  }),
+  v.object({
     kind: v.literal("image"),
     storageId: v.optional(v.id("_storage")),
     url: v.optional(v.string()),
@@ -38,6 +42,7 @@ export const nodeData = v.union(
 // handle bookkeeping) — only what's needed to reconstruct the node on read.
 export const nodeType = v.union(
   v.literal("link"),
+  v.literal("text"),
   v.literal("image"),
   v.literal("pdf"),
 );

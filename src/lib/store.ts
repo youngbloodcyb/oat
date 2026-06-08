@@ -13,15 +13,17 @@ export type BoardNodeData = ClientNode["data"];
 
 // Per-kind narrowing of the data union, handy for components.
 export type LinkNodeData = Extract<BoardNodeData, { kind: "link" }>;
+export type TextNodeData = Extract<BoardNodeData, { kind: "text" }>;
 export type ImageNodeData = Extract<BoardNodeData, { kind: "image" }>;
 export type PdfNodeData = Extract<BoardNodeData, { kind: "pdf" }>;
 export type OgMeta = NonNullable<LinkNodeData["og"]>;
 
 export type LinkNode = Node<LinkNodeData, "link">;
+export type TextNode = Node<TextNodeData, "text">;
 export type ImageNode = Node<ImageNodeData, "image">;
 export type PdfNode = Node<PdfNodeData, "pdf">;
 
-export type BoardNode = LinkNode | ImageNode | PdfNode;
+export type BoardNode = LinkNode | TextNode | ImageNode | PdfNode;
 
 // Default footprint per node kind, applied at creation time.
 export const DEFAULT_STYLE: Record<
@@ -29,6 +31,7 @@ export const DEFAULT_STYLE: Record<
   { width: number; height: number }
 > = {
   link: { width: 256, height: 280 },
+  text: { width: 220, height: 120 },
   image: { width: 240, height: 240 },
   pdf: { width: 320, height: 400 },
 };

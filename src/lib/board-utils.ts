@@ -3,25 +3,30 @@
 // bytes to Convex storage; URL-backed drafts are stored as-is.
 export type NodeDraft =
   | { kind: "link"; url: string }
+  | { kind: "text"; text: string }
   | { kind: "image"; file: File; alt: string }
   | { kind: "pdf"; file: File; name: string }
   | { kind: "pdf"; url: string; name: string };
 
-export function detectFromText(text: string): NodeDraft | null {
-  let parsed: URL;
+// Text always produces a draft: an http(s) URL becomes a link/pdf, anything
+// else becomes a plain text node.
+export function detectFromText(text: string): NodeDraft {
+  let parsed: URL | null = null;
   try {
     parsed = new URL(text.trim());
-  } catch {
-    return null;
+  } catch {}
+
+  if (parsed && (parsed.protocol === "http:" || parsed.protocol === "https:")) {
+    if (parsed.pathname.toLowerCase().endsWith(".pdf")) {
+      const name = decodeURIComponent(
+        parsed.pathname.split("/").pop() || parsed.href,
+      );
+      return { kind: "pdf", url: parsed.href, name };
+    }
+    return { kind: "link", url: parsed.href };
   }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-  if (parsed.pathname.toLowerCase().endsWith(".pdf")) {
-    const name = decodeURIComponent(
-      parsed.pathname.split("/").pop() || parsed.href,
-    );
-    return { kind: "pdf", url: parsed.href, name };
-  }
-  return { kind: "link", url: parsed.href };
+
+  return { kind: "text", text };
 }
 
 export function detectFromFile(file: File): NodeDraft | null {
