@@ -9,6 +9,10 @@ const resizeControlStyle = {
   border: "none",
   width: 32,
   height: 32,
+  // Keep the handle above node content. Tiptap text content sets
+  // `position: relative` on its blocks, which would otherwise paint over the
+  // handle (it's earlier in the DOM) and swallow the resize drag.
+  zIndex: 10,
 };
 
 const selectedGlow =
