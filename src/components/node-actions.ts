@@ -20,6 +20,7 @@ export type ActionCtx = {
   duplicate: (node: BoardNode) => void;
   bringToFront: (node: BoardNode) => void;
   editData: (id: string, data: EditableNodeData) => void;
+  openTextEditor: (id: string) => void;
 };
 
 export type NodeAction = {
@@ -120,10 +121,7 @@ const refreshPreview: NodeAction = {
 const editText: NodeAction = {
   name: "Edit text",
   icon: PencilSimpleIcon,
-  run: (c) => {
-    const el = document.querySelector(`[data-id="${c.node.id}"] textarea`);
-    if (el instanceof HTMLTextAreaElement) el.focus();
-  },
+  run: (c) => c.openTextEditor(c.node.id),
 };
 
 const clearText: NodeAction = {

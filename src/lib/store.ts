@@ -90,6 +90,10 @@ type BoardState = {
   // a previous board's nodes while a new board's query is still loading.
   nodesBoardId: string | null;
   selectedNode: BoardNode | null;
+  // The text node currently open in the editor drawer (null = drawer closed).
+  editingTextNodeId: string | null;
+  openTextEditor: (id: string) => void;
+  closeTextEditor: () => void;
   // Replace local nodes with the latest server snapshot for `boardId`,
   // preserving transient React Flow UI state (selection, in-flight drag,
   // measurements) only when staying on the same board.
@@ -103,6 +107,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   nodes: [],
   nodesBoardId: null,
   selectedNode: null,
+  editingTextNodeId: null,
+  openTextEditor: (id) => set({ editingTextNodeId: id }),
+  closeTextEditor: () => set({ editingTextNodeId: null }),
   setNodes: (boardId, incoming) => {
     // Only carry over UI state when we're refreshing the same board; switching
     // boards must replace wholesale so nothing stale leaks across.

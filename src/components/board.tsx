@@ -14,6 +14,7 @@ import { DockMenu } from "@/components/dock-menu";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
 import { nodeTypes } from "@/components/nodes";
+import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardSync } from "@/hooks/use-board-sync";
@@ -82,6 +83,7 @@ function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
         <Background gap={20} size={1} />
       </ReactFlow>
       <NodeDock boardId={boardId} />
+      <TextEditorDrawer />
       <DockMenu />
     </div>
   );
