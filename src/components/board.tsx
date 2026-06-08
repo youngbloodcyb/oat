@@ -10,6 +10,7 @@ import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { DockMenu } from "@/components/dock-menu";
 import { Loading } from "@/components/loading";
 import { nodeTypes } from "@/components/nodes";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
       >
         <Background gap={20} size={1} />
       </ReactFlow>
+      <DockMenu />
     </div>
   );
 }
