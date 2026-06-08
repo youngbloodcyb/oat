@@ -16,6 +16,7 @@ import type { Id } from "~/_generated/dataModel";
 export function NodeDock({ boardId }: { boardId: Id<"boards"> }) {
   const selectedNode = useBoardStore((s) => s.selectedNode);
   const openTextEditor = useBoardStore((s) => s.openTextEditor);
+  const openImageCrop = useBoardStore((s) => s.openImageCrop);
   const { removeNode, duplicateNode, bringToFront } = useBoardActions(boardId);
   const editData = useEditNodeData();
 
@@ -62,6 +63,7 @@ export function NodeDock({ boardId }: { boardId: Id<"boards"> }) {
               bringToFront,
               editData,
               openTextEditor,
+              openImageCrop,
             };
             action.run(ctx);
           }}

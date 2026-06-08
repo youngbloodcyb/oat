@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { DockMenu } from "@/components/dock-menu";
+import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
 import { nodeTypes } from "@/components/nodes";
@@ -84,6 +85,7 @@ function BoardCanvas({ boardId }: { boardId: Id<"boards"> }) {
       </ReactFlow>
       <NodeDock boardId={boardId} />
       <TextEditorDrawer />
+      <ImageCropDialog boardId={boardId} />
       <DockMenu />
     </div>
   );

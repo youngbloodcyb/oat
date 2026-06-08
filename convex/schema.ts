@@ -28,6 +28,8 @@ export const nodeData = v.union(
     storageId: v.optional(v.id("_storage")),
     url: v.optional(v.string()),
     alt: v.optional(v.string()),
+    // How the image fills its node box (CSS object-fit). Defaults to cover.
+    fit: v.optional(v.union(v.literal("cover"), v.literal("contain"))),
   }),
   v.object({
     kind: v.literal("pdf"),

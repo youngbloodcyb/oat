@@ -94,6 +94,23 @@ export function useBoardActions(boardId: Id<"boards">) {
     },
   );
 
+  const patchImg = useMutation(api.nodes.patchImage).withOptimisticUpdate(
+    (localStore, { nodeId, fit }) => {
+      if (fit === undefined) return; // storageId change shows after refetch
+      const cur = localStore.getQuery(api.nodes.listByBoard, { boardId });
+      if (!cur) return;
+      localStore.setQuery(
+        api.nodes.listByBoard,
+        { boardId },
+        cur.map((n) =>
+          n._id === nodeId && n.data.kind === "image"
+            ? { ...n, data: { ...n.data, fit } }
+            : n,
+        ),
+      );
+    },
+  );
+
   const upload = useCallback(
     async (file: File): Promise<Id<"_storage">> => {
       const url = await generateUploadUrl();
@@ -203,6 +220,25 @@ export function useBoardActions(boardId: Id<"boards">) {
     [reorder],
   );
 
+  const setImageFit = useCallback(
+    (nodeId: string, fit: "cover" | "contain") =>
+      patchImg({ nodeId: nodeId as Id<"nodes">, fit }),
+    [patchImg],
+  );
+
+  // Upload a cropped data URL as a new file and point the node at it.
+  const replaceImage = useCallback(
+    async (nodeId: string, croppedDataUrl: string) => {
+      const blob = await (await fetch(croppedDataUrl)).blob();
+      const file = new File([blob], "crop.png", {
+        type: blob.type || "image/png",
+      });
+      const storageId = await upload(file);
+      await patchImg({ nodeId: nodeId as Id<"nodes">, storageId });
+    },
+    [patchImg, upload],
+  );
+
   return {
     addDraft,
     moveNode,
@@ -211,5 +247,7 @@ export function useBoardActions(boardId: Id<"boards">) {
     resizeNode,
     duplicateNode,
     bringToFront,
+    setImageFit,
+    replaceImage,
   };
 }

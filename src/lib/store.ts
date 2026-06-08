@@ -94,6 +94,10 @@ type BoardState = {
   editingTextNodeId: string | null;
   openTextEditor: (id: string) => void;
   closeTextEditor: () => void;
+  // The image node currently open in the crop dialog (null = closed).
+  croppingImageNodeId: string | null;
+  openImageCrop: (id: string) => void;
+  closeImageCrop: () => void;
   // Replace local nodes with the latest server snapshot for `boardId`,
   // preserving transient React Flow UI state (selection, in-flight drag,
   // measurements) only when staying on the same board.
@@ -110,6 +114,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   editingTextNodeId: null,
   openTextEditor: (id) => set({ editingTextNodeId: id }),
   closeTextEditor: () => set({ editingTextNodeId: null }),
+  croppingImageNodeId: null,
+  openImageCrop: (id) => set({ croppingImageNodeId: id }),
+  closeImageCrop: () => set({ croppingImageNodeId: null }),
   setNodes: (boardId, incoming) => {
     // Only carry over UI state when we're refreshing the same board; switching
     // boards must replace wholesale so nothing stale leaks across.

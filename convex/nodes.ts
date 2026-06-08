@@ -28,7 +28,7 @@ async function toClientData(ctx: QueryCtx, data: Doc<"nodes">["data"]) {
       ? ((await ctx.storage.getUrl(data.storageId)) ?? "")
       : (data.url ?? "");
     return data.kind === "image"
-      ? { kind: "image" as const, src, alt: data.alt }
+      ? { kind: "image" as const, src, alt: data.alt, fit: data.fit }
       : { kind: "pdf" as const, src, name: data.name };
   }
   return data; // link
@@ -97,6 +97,34 @@ export const update = mutation({
     const node = await ctx.db.get(nodeId);
     if (!node || node.userId !== user._id) throw new Error("Node not found");
     await ctx.db.patch(nodeId, patch);
+  },
+});
+
+// Patch an image node's display fields server-side, where the full stored
+// data (incl. storageId) is available — the client view only has a resolved
+// `src`, so it can't round-trip image data through the generic `update`.
+export const patchImage = mutation({
+  args: {
+    nodeId: v.id("nodes"),
+    fit: v.optional(v.union(v.literal("cover"), v.literal("contain"))),
+    // New backing file (e.g. a cropped image). Replaces storageId/url and
+    // deletes the previous file so it doesn't orphan storage.
+    storageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, { nodeId, fit, storageId }) => {
+    const user = await authComponent.getAuthUser(ctx);
+    const node = await ctx.db.get(nodeId);
+    if (!node || node.userId !== user._id) throw new Error("Node not found");
+    if (node.data.kind !== "image") return;
+
+    const next = { ...node.data };
+    if (fit !== undefined) next.fit = fit;
+    if (storageId !== undefined) {
+      if (node.data.storageId) await ctx.storage.delete(node.data.storageId);
+      next.storageId = storageId;
+      next.url = undefined;
+    }
+    await ctx.db.patch(nodeId, { data: next });
   },
 });
 

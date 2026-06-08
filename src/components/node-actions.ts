@@ -3,6 +3,7 @@ import {
   ArrowsClockwiseIcon,
   ArrowSquareOutIcon,
   CopyIcon,
+  CropIcon,
   DownloadSimpleIcon,
   EraserIcon,
   LinkIcon,
@@ -21,6 +22,7 @@ export type ActionCtx = {
   bringToFront: (node: BoardNode) => void;
   editData: (id: string, data: EditableNodeData) => void;
   openTextEditor: (id: string) => void;
+  openImageCrop: (id: string) => void;
 };
 
 export type NodeAction = {
@@ -134,6 +136,12 @@ const clearText: NodeAction = {
 
 // --- Image / PDF -----------------------------------------------------------
 
+const cropImage: NodeAction = {
+  name: "Crop image",
+  icon: CropIcon,
+  run: (c) => c.openImageCrop(c.node.id),
+};
+
 const openImage: NodeAction = {
   name: "Open image",
   icon: ArrowSquareOutIcon,
@@ -172,7 +180,7 @@ const downloadPdf: NodeAction = {
 const actionsByKind: Partial<Record<BoardNode["type"], NodeAction[]>> = {
   link: [openLink, copyUrl, refreshPreview],
   text: [editText, clearText],
-  image: [openImage, downloadImage],
+  image: [cropImage, openImage, downloadImage],
   pdf: [openPdf, downloadPdf],
 };
 
