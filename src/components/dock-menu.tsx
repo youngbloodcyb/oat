@@ -53,6 +53,7 @@ export function DockMenu({ className }: { className?: string }) {
           aria-label={name}
           title={name}
           onClick={onSelect}
+          className="transition-transform duration-200 ease-out hover:scale-150 hover:bg-transparent motion-reduce:transition-none motion-reduce:hover:scale-100"
         >
           <IconCmp />
         </Button>
