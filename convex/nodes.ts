@@ -60,6 +60,7 @@ export const listByBoard = query({
         type: n.type,
         position: n.position,
         style: n.style,
+        zIndex: n.zIndex,
         data: await toClientData(ctx, n.data),
       })),
     );
@@ -89,6 +90,7 @@ export const update = mutation({
     position: v.optional(position),
     data: v.optional(nodeData),
     style: v.optional(style),
+    zIndex: v.optional(v.number()),
   },
   handler: async (ctx, { nodeId, ...patch }) => {
     const user = await authComponent.getAuthUser(ctx);

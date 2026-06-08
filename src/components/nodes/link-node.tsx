@@ -3,12 +3,11 @@
 import type { NodeProps } from "@xyflow/react";
 import { useEffect, useRef } from "react";
 import { NodeShell } from "@/components/nodes/node-shell";
-import { useUpdateNodeData } from "@/hooks/use-board-actions";
-import { type LinkNode as LinkNodeType, useBoardStore } from "@/lib/store";
+import { useEditNodeData } from "@/hooks/use-edit-node-data";
+import type { LinkNode as LinkNodeType } from "@/lib/store";
 
 export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
-  const updateNodeData = useBoardStore((s) => s.updateNodeData);
-  const persistNodeData = useUpdateNodeData();
+  const editNodeData = useEditNodeData();
   const triedRef = useRef(false);
 
   useEffect(() => {
@@ -19,11 +18,10 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
       .then((r) => (r.ok ? r.json() : null))
       .then((og) => {
         if (!og) return;
-        updateNodeData<LinkNodeType["data"]>(id, { og }); // instant, local
-        persistNodeData(id, { kind: "link", url: data.url, og }); // to Convex
+        editNodeData(id, { kind: "link", url: data.url, og });
       })
       .catch(() => {});
-  }, [id, data.url, data.og, updateNodeData, persistNodeData]);
+  }, [id, data.url, data.og, editNodeData]);
 
   let host = data.url;
   try {

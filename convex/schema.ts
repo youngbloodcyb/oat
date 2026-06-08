@@ -63,6 +63,7 @@ export default defineSchema({
     position: v.object({ x: v.number(), y: v.number() }),
     data: nodeData,
     style: v.optional(v.object({ width: v.number(), height: v.number() })),
+    zIndex: v.optional(v.number()), // stacking order (bring-to-front)
   })
     .index("by_board", ["boardId"])
     .index("by_user", ["userId"]),

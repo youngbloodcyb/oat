@@ -6,7 +6,13 @@ import { api } from "~/_generated/api";
 import type { Id } from "~/_generated/dataModel";
 import type { NodeData, NodeType } from "~/nodes";
 import type { NodeDraft } from "@/lib/board-utils";
-import { DEFAULT_STYLE } from "@/lib/store";
+import {
+  type BoardNode,
+  DEFAULT_STYLE,
+  nodeSize,
+  toStoredData,
+  useBoardStore,
+} from "@/lib/store";
 
 /**
  * Standalone data-only update, for nodes that edit their own payload (e.g. a
@@ -60,6 +66,18 @@ export function useBoardActions(boardId: Id<"boards">) {
               }
             : n,
         ),
+      );
+    },
+  );
+
+  const reorder = useMutation(api.nodes.update).withOptimisticUpdate(
+    (localStore, { nodeId, zIndex }) => {
+      const cur = localStore.getQuery(api.nodes.listByBoard, { boardId });
+      if (!cur) return;
+      localStore.setQuery(
+        api.nodes.listByBoard,
+        { boardId },
+        cur.map((n) => (n._id === nodeId ? { ...n, zIndex } : n)),
       );
     },
   );
@@ -162,5 +180,36 @@ export function useBoardActions(boardId: Id<"boards">) {
     [resize],
   );
 
-  return { addDraft, moveNode, removeNode, setNodeData, resizeNode };
+  const duplicateNode = useCallback(
+    (node: BoardNode) =>
+      create({
+        boardId,
+        type: node.type,
+        position: { x: node.position.x + 24, y: node.position.y + 24 },
+        data: toStoredData(node.data),
+        style: nodeSize(node),
+      }),
+    [boardId, create],
+  );
+
+  const bringToFront = useCallback(
+    (node: BoardNode) => {
+      const maxZ = Math.max(
+        0,
+        ...useBoardStore.getState().nodes.map((n) => n.zIndex ?? 0),
+      );
+      return reorder({ nodeId: node.id as Id<"nodes">, zIndex: maxZ + 1 });
+    },
+    [reorder],
+  );
+
+  return {
+    addDraft,
+    moveNode,
+    removeNode,
+    setNodeData,
+    resizeNode,
+    duplicateNode,
+    bringToFront,
+  };
 }

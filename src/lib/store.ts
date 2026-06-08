@@ -2,6 +2,7 @@ import { applyNodeChanges, type Node, type NodeChange } from "@xyflow/react";
 import type { FunctionReturnType } from "convex/server";
 import { create } from "zustand";
 import type { api } from "~/_generated/api";
+import type { NodeData } from "~/nodes";
 
 // Convex is the source of truth. These types are derived from what
 // `nodes.listByBoard` returns — i.e. the resolved client view, where image/pdf
@@ -17,6 +18,10 @@ export type TextNodeData = Extract<BoardNodeData, { kind: "text" }>;
 export type ImageNodeData = Extract<BoardNodeData, { kind: "image" }>;
 export type PdfNodeData = Extract<BoardNodeData, { kind: "pdf" }>;
 export type OgMeta = NonNullable<LinkNodeData["og"]>;
+
+// Kinds whose client and stored data shapes are identical, so they can be
+// edited in place (image/pdf differ — storageId/url vs resolved src).
+export type EditableNodeData = LinkNodeData | TextNodeData;
 
 export type LinkNode = Node<LinkNodeData, "link">;
 export type TextNode = Node<TextNodeData, "text">;
@@ -36,6 +41,14 @@ export const DEFAULT_STYLE: Record<
   pdf: { width: 320, height: 400 },
 };
 
+// The single selected node, or null when nothing — or more than one — is
+// selected. The node dock is a single-node inspector, so it stays hidden
+// unless exactly one node is selected.
+const soleSelected = (nodes: BoardNode[]): BoardNode | null => {
+  const selected = nodes.filter((n) => n.selected);
+  return selected.length === 1 ? selected[0] : null;
+};
+
 /** Convex query row -> React Flow node (id comes from the Convex _id). */
 export const toBoardNode = (doc: ClientNode): BoardNode =>
   ({
@@ -44,7 +57,32 @@ export const toBoardNode = (doc: ClientNode): BoardNode =>
     position: doc.position,
     data: doc.data,
     style: doc.style,
+    zIndex: doc.zIndex,
   }) as BoardNode;
+
+/** Client node data -> the STORED shape the create/update mutations expect. */
+export const toStoredData = (data: BoardNodeData): NodeData => {
+  switch (data.kind) {
+    // Reference the same file by its resolved URL (storageId isn't on the
+    // client view); links/text are identical in both shapes.
+    case "image":
+      return { kind: "image", url: data.src, alt: data.alt };
+    case "pdf":
+      return { kind: "pdf", url: data.src, name: data.name };
+    default:
+      return data;
+  }
+};
+
+/** Current rendered size of a node, falling back to its kind's default. */
+export const nodeSize = (node: BoardNode): { width: number; height: number } => {
+  const style = node.style as { width?: number; height?: number } | undefined;
+  const def = DEFAULT_STYLE[node.type];
+  return {
+    width: node.measured?.width ?? style?.width ?? def.width,
+    height: node.measured?.height ?? style?.height ?? def.height,
+  };
+};
 
 type BoardState = {
   nodes: BoardNode[];
@@ -58,10 +96,7 @@ type BoardState = {
   setNodes: (boardId: string, incoming: BoardNode[]) => void;
   onNodesChange: (changes: NodeChange<BoardNode>[]) => void;
   // Local, optimistic data merge (persisted separately via a mutation).
-  updateNodeData: <T extends BoardNodeData>(
-    id: string,
-    patch: Partial<T>,
-  ) => void;
+  updateNodeData: (id: string, patch: Partial<BoardNodeData>) => void;
 };
 
 export const useBoardStore = create<BoardState>((set, get) => ({
@@ -87,12 +122,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         position: old.dragging ? old.position : n.position,
       } as BoardNode;
     });
-    const selectedNode = nodes.find((n) => n.selected) ?? null;
-    set({ nodes, selectedNode, nodesBoardId: boardId });
+    set({ nodes, selectedNode: soleSelected(nodes), nodesBoardId: boardId });
   },
   onNodesChange: (changes) => {
     const nodes = applyNodeChanges(changes, get().nodes);
-    const selectedNode = nodes.find((n) => n.selected) ?? null;
+    const selectedNode = soleSelected(nodes);
     set(
       selectedNode === get().selectedNode ? { nodes } : { nodes, selectedNode },
     );

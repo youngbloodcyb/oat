@@ -3,12 +3,11 @@
 import type { NodeProps } from "@xyflow/react";
 import { useEffect, useState } from "react";
 import { NodeShell } from "@/components/nodes/node-shell";
-import { useUpdateNodeData } from "@/hooks/use-board-actions";
-import { type TextNode as TextNodeType, useBoardStore } from "@/lib/store";
+import { useEditNodeData } from "@/hooks/use-edit-node-data";
+import type { TextNode as TextNodeType } from "@/lib/store";
 
 export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
-  const updateNodeData = useBoardStore((s) => s.updateNodeData);
-  const persistNodeData = useUpdateNodeData();
+  const editNodeData = useEditNodeData();
   const [value, setValue] = useState(data.text);
 
   // Stay in sync if the text changes server-side (e.g. another client).
@@ -18,8 +17,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
 
   const commit = () => {
     if (value === data.text) return;
-    updateNodeData<TextNodeType["data"]>(id, { text: value }); // instant, local
-    persistNodeData(id, { kind: "text", text: value }); // to Convex
+    editNodeData(id, { kind: "text", text: value });
   };
 
   return (
