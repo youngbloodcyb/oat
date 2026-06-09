@@ -1,5 +1,6 @@
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { v, type Infer } from "convex/values";
+import { internal } from "./_generated/api";
 import { authComponent } from "./betterAuth/auth";
 import { nodeData, nodeType } from "./schema";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -77,8 +78,21 @@ export const create = mutation({
   },
   handler: async (ctx, { boardId, ...node }) => {
     const { user } = await requireBoard(ctx, boardId);
-    return await ctx.db.insert("nodes", { boardId, userId: user._id, ...node });
+    const nodeId = await ctx.db.insert("nodes", {
+      boardId,
+      userId: user._id,
+      ...node,
+    });
+    // Kick off embedding in the background (actions can call the API).
+    await ctx.scheduler.runAfter(0, internal.embeddings.embedNode, { nodeId });
+    return nodeId;
   },
+});
+
+// Internal read for the embedding action (no auth — internal only).
+export const getInternal = internalQuery({
+  args: { nodeId: v.id("nodes") },
+  handler: async (ctx, { nodeId }) => await ctx.db.get(nodeId),
 });
 
 // Patch any subset of the persisted fields. `data` is replaced wholesale
@@ -97,6 +111,10 @@ export const update = mutation({
     const node = await ctx.db.get(nodeId);
     if (!node || node.userId !== user._id) throw new Error("Node not found");
     await ctx.db.patch(nodeId, patch);
+    // Re-embed only when the content changed (not on move/resize/reorder).
+    if (patch.data !== undefined) {
+      await ctx.scheduler.runAfter(0, internal.embeddings.embedNode, { nodeId });
+    }
   },
 });
 
@@ -141,6 +159,12 @@ export const remove = mutation({
     ) {
       await ctx.storage.delete(node.data.storageId);
     }
+    // Drop its embedding too.
+    const emb = await ctx.db
+      .query("embeddings")
+      .withIndex("by_node", (q) => q.eq("nodeId", nodeId))
+      .unique();
+    if (emb) await ctx.db.delete(emb._id);
     await ctx.db.delete(nodeId);
   },
 });

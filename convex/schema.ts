@@ -69,4 +69,18 @@ export default defineSchema({
   })
     .index("by_board", ["boardId"])
     .index("by_user", ["userId"]),
+
+  // One embedding per node, written by a scheduled action after create/edit.
+  embeddings: defineTable({
+    nodeId: v.id("nodes"),
+    boardId: v.id("boards"),
+    userId: v.string(),
+    embedding: v.array(v.float64()),
+  })
+    .index("by_node", ["nodeId"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536, // OpenAI text-embedding-3-small
+      filterFields: ["userId", "boardId"],
+    }),
 });

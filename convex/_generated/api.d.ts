@@ -9,6 +9,7 @@
  */
 
 import type * as boards from "../boards.js";
+import type * as embeddings from "../embeddings.js";
 import type * as http from "../http.js";
 import type * as nodes from "../nodes.js";
 
@@ -20,6 +21,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   boards: typeof boards;
+  embeddings: typeof embeddings;
   http: typeof http;
   nodes: typeof nodes;
 }>;
