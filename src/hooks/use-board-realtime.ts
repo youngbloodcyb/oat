@@ -13,6 +13,31 @@ import { listNodesByBoard } from "@/services/nodes";
 
 const SEND_INTERVAL_MS = 50;
 const CURSOR_STALE_MS = 15_000;
+const HIDDEN_DISCONNECT_MS = 30_000;
+
+// False once the tab has stayed hidden for `graceMs`; quick tab switches keep
+// the socket. Reconnecting resyncs from a fresh snapshot, so nothing is lost.
+function usePageActive(graceMs: number): boolean {
+  const [active, setActive] = useState(true);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onVisibilityChange = () => {
+      clearTimeout(timer);
+      if (document.visibilityState === "visible") {
+        setActive(true);
+      } else {
+        timer = setTimeout(() => setActive(false), graceMs);
+      }
+    };
+    onVisibilityChange();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [graceMs]);
+  return active;
+}
 
 export type RemoteCursor = {
   clientId: string;
@@ -40,6 +65,8 @@ export function useBoardRealtime({
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const pageActive = usePageActive(HIDDEN_DISCONNECT_MS);
+  const connected = enabled && pageActive;
   const socketRef = useRef<WebSocket | null>(null);
   const stoppedRef = useRef(false);
   const revokedRef = useRef(false);
@@ -119,7 +146,7 @@ export function useBoardRealtime({
   );
 
   useEffect(() => {
-    if (!enabled || !clientId.current) return;
+    if (!connected || !clientId.current) return;
     stoppedRef.current = false;
     revokedRef.current = false;
     const stableClientId = clientId.current;
@@ -235,7 +262,7 @@ export function useBoardRealtime({
       setMembers([]);
       setCursors([]);
     };
-  }, [boardId, enabled, handleDurableEvent, refreshSnapshot, router]);
+  }, [boardId, connected, handleDurableEvent, refreshSnapshot, router]);
 
   const send = useCallback((event: unknown) => {
     const socket = socketRef.current;

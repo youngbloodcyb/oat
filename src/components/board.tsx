@@ -30,7 +30,7 @@ import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
 import { type CanvasNode, useBoardStore } from "@/lib/store";
-import type { AccessibleBoard } from "@/services/boards";
+import type { BoardDetail } from "@/services/boards";
 import type { NodeSearchResult } from "@/services/search";
 
 const proOptions = { hideAttribution: true };
@@ -39,10 +39,12 @@ function BoardCanvas({
   boardId,
   focusNodeId,
   canEdit,
+  isShared,
 }: {
   boardId: string;
   focusNodeId?: string;
   canEdit: boolean;
+  isShared: boolean;
 }) {
   const router = useRouter();
   const { fitView, screenToFlowPosition } = useReactFlow<CanvasNode>();
@@ -61,7 +63,12 @@ function BoardCanvas({
     })),
   );
   const { onDragOver, onDrop } = useCanvasInputs(boardId, canEdit);
-  const realtime = useBoardRealtime({ boardId, enabled: ready, canEdit });
+  // Unshared boards have nobody to sync with, so they never open a socket.
+  const realtime = useBoardRealtime({
+    boardId,
+    enabled: ready && isShared,
+    canEdit,
+  });
   const canvasNodes = useMemo(
     () => [...nodes, ...pendingNodes],
     [nodes, pendingNodes],
@@ -177,7 +184,9 @@ function BoardCanvas({
         <Background gap={20} size={1} />
       </ReactFlow>
       <RealtimeCursors cursors={realtime.cursors} />
-      <RealtimePresence members={realtime.members} status={realtime.status} />
+      {isShared && (
+        <RealtimePresence members={realtime.members} status={realtime.status} />
+      )}
       {canEdit && <NodeDock boardId={boardId} />}
       {canEdit && <TextEditorDrawer />}
       {canEdit && <ImageCropDialog boardId={boardId} />}
@@ -206,7 +215,7 @@ export function Board({
   board,
   focusNodeId,
 }: {
-  board: AccessibleBoard;
+  board: BoardDetail;
   focusNodeId?: string;
 }) {
   const canEdit = board.accessRole !== "viewer";
@@ -236,6 +245,7 @@ export function Board({
           boardId={board.id}
           focusNodeId={focusNodeId}
           canEdit={canEdit}
+          isShared={board.isShared}
         />
       </BoardPermissionsProvider>
     </ReactFlowProvider>

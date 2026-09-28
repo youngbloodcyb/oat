@@ -41,17 +41,28 @@ export async function listBoards(): Promise<AccessibleBoard[]> {
   }));
 }
 
-export async function getBoard(
-  boardId: string,
-): Promise<AccessibleBoard | null> {
+export type BoardDetail = AccessibleBoard & { isShared: boolean };
+
+export async function getBoard(boardId: string): Promise<BoardDetail | null> {
   const user = await requireUser();
   const access = await findBoardAccess(boardId, user.id);
   if (!access) return null;
+  // Non-owners only have access through a share, so only owners need the lookup.
+  const isShared =
+    access.role !== "owner" ||
+    (
+      await db
+        .select({ userId: boardShares.userId })
+        .from(boardShares)
+        .where(eq(boardShares.boardId, boardId))
+        .limit(1)
+    ).length > 0;
   return {
     id: access.board.id,
     name: access.board.name,
     createdAt: access.board.createdAt,
     accessRole: access.role,
+    isShared,
   };
 }
 

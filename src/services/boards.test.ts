@@ -143,14 +143,32 @@ describe("listBoards", () => {
 
 describe("getBoard", () => {
   it("returns the board when owned by the user", async () => {
+    db.select.mockReturnValue(chainable([]));
     const result = await getBoard("board-a");
     expect(result).toEqual({
       id: BOARD_A.id,
       name: BOARD_A.name,
       createdAt: BOARD_A.createdAt,
       accessRole: "owner",
+      isShared: false,
     });
     expect(mockFindBoardAccess).toHaveBeenCalledWith("board-a", USER_A.id);
+  });
+
+  it("marks an owned board as shared when it has at least one share", async () => {
+    db.select.mockReturnValue(chainable([{ userId: "user-b" }]));
+    const result = await getBoard("board-a");
+    expect(result?.isShared).toBe(true);
+  });
+
+  it("marks boards accessed through a share as shared without querying shares", async () => {
+    mockFindBoardAccess.mockResolvedValue({
+      board: { ...BOARD_A, userId: "owner-b" },
+      role: "editor",
+    });
+    const result = await getBoard("board-a");
+    expect(result?.isShared).toBe(true);
+    expect(db.select).not.toHaveBeenCalled();
   });
 
   it("returns null for a board owned by another user (conceals unowned)", async () => {

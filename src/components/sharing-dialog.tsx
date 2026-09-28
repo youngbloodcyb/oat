@@ -1,6 +1,7 @@
 "use client";
 
 import { CopyIcon, ShareNetworkIcon, TrashIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ export function SharingDialog({
   boardName: string;
   className?: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [members, setMembers] = useState<BoardShareMember[]>([]);
   const [email, setEmail] = useState("");
@@ -72,6 +74,8 @@ export function SharingDialog({
       await addBoardShare({ boardId, email, role });
       setEmail("");
       await loadMembers();
+      // Re-fetch the board so a newly shared board turns on realtime.
+      router.refresh();
       toast.success("Board shared");
     } catch (error) {
       toast.error(messageFrom(error));
