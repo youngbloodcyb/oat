@@ -11,7 +11,13 @@ import {
   nodes,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
-import { blobExists, deleteBlob, nodeObjectKey } from "@/lib/blob";
+import {
+  blobExists,
+  copyBlob,
+  deleteBlob,
+  nodeObjectKey,
+  objectKeyFor,
+} from "@/lib/blob";
 import { toClientNode, toClientNodeData } from "@/lib/client-node";
 import { nodeEmbeddingSourceKey } from "@/lib/embedding-source";
 import { nodeSearchText } from "@/lib/node-search";
@@ -229,22 +235,37 @@ export async function duplicateNode(input: {
   const { node: src } = await requireNodeAccess(input.nodeId, user.id, "edit");
   const { board } = await requireBoardAccess(input.boardId, user.id, "edit");
   const id = crypto.randomUUID();
-  const searchText = nodeSearchText(src.data);
-  const embeddingSource = nodeEmbeddingSourceKey(src.data, searchText);
-  await db.insert(nodes).values({
-    id,
-    boardId: input.boardId,
-    userId: board.userId,
-    type: src.type,
-    positionX: input.position.x,
-    positionY: input.position.y,
-    width: input.style?.width ?? src.width ?? undefined,
-    height: input.style?.height ?? src.height ?? undefined,
-    zIndex: src.zIndex ?? undefined,
-    data: src.data,
-    searchText,
-    embeddingSource,
-  });
+
+  // Each node owns its blob (removeNode deletes it), so duplicates need their own copy.
+  const srcKey = nodeObjectKey(src.data);
+  const copiedKey = srcKey
+    ? await copyBlob(srcKey, objectKeyFor(user.id, input.boardId))
+    : undefined;
+  const data = (
+    copiedKey ? { ...src.data, objectKey: copiedKey } : src.data
+  ) as NodeData;
+
+  const searchText = nodeSearchText(data);
+  const embeddingSource = nodeEmbeddingSourceKey(data, searchText);
+  try {
+    await db.insert(nodes).values({
+      id,
+      boardId: input.boardId,
+      userId: board.userId,
+      type: src.type,
+      positionX: input.position.x,
+      positionY: input.position.y,
+      width: input.style?.width ?? src.width ?? undefined,
+      height: input.style?.height ?? src.height ?? undefined,
+      zIndex: src.zIndex ?? undefined,
+      data,
+      searchText,
+      embeddingSource,
+    });
+  } catch (error) {
+    if (copiedKey) await deleteBlob(copiedKey);
+    throw error;
+  }
   await publishDurableBoardEvent({
     type: "node.created",
     boardId: input.boardId,
@@ -260,7 +281,7 @@ export async function duplicateNode(input: {
           ? { width: src.width, height: src.height }
           : undefined),
       zIndex: src.zIndex ?? undefined,
-      data: toClientNodeData(src.data, id),
+      data: toClientNodeData(data, id),
     },
   });
   if (embeddingSource) await scheduleNodeEmbedding(id);

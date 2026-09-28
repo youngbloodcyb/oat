@@ -6,7 +6,11 @@ vi.mock("@/lib/auth-server", () => ({
 
 vi.mock("@/lib/blob", () => ({
   blobExists: vi.fn().mockResolvedValue(true),
+  copyBlob: vi.fn(async (_from: string, to: string) => `${to}-copied`),
   deleteBlob: vi.fn().mockResolvedValue(undefined),
+  objectKeyFor: vi.fn(
+    (userId: string, boardId: string) => `${userId}/${boardId}/new-key`,
+  ),
   nodeObjectKey: vi.fn((data: { kind: string; objectKey?: string }) =>
     data?.kind === "image" || data?.kind === "pdf"
       ? data?.objectKey
@@ -45,7 +49,7 @@ import { start } from "workflow/api";
 import { db as _db } from "@/db";
 import type { NodeData, StoredNode } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
-import { blobExists, deleteBlob } from "@/lib/blob";
+import { blobExists, copyBlob, deleteBlob } from "@/lib/blob";
 import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess, requireNodeAccess } from "@/services/board-access";
 import {
@@ -61,6 +65,7 @@ const db = _db as any;
 const mockRequireUser = vi.mocked(requireUser);
 const mockBlobExists = vi.mocked(blobExists);
 const mockDeleteBlob = vi.mocked(deleteBlob);
+const mockCopyBlob = vi.mocked(copyBlob);
 const mockPublishDurableBoardEvent = vi.mocked(publishDurableBoardEvent);
 const mockStart = vi.mocked(start);
 const mockWorkflowEmbedNode = vi.mocked(workflowEmbedNode);
@@ -811,7 +816,82 @@ describe("duplicateNode", () => {
     });
 
     expect(query.values).toHaveBeenCalledWith(
-      expect.objectContaining({ data }),
+      expect.objectContaining({
+        data: { ...data, objectKey: "user-a/board-a/new-key-copied" },
+      }),
+    );
+  });
+
+  it("copies the source blob so deleting either node cannot break the other", async () => {
+    setupLookups(
+      storedNode({
+        id: "img-1",
+        type: "image",
+        data: {
+          kind: "image",
+          objectKey: "user-a/board-a/logo",
+          alt: "logo.svg",
+        },
+      }),
+      BOARD_A,
+    );
+    const query = setupInsert();
+
+    await duplicateNode({
+      nodeId: "img-1",
+      boardId: "board-a",
+      position: { x: 0, y: 0 },
+    });
+
+    expect(mockCopyBlob).toHaveBeenCalledWith(
+      "user-a/board-a/logo",
+      "user-a/board-a/new-key",
+    );
+    const values = query.values.mock.calls[0][0];
+    expect(values.data.objectKey).toBe("user-a/board-a/new-key-copied");
+    expect(values.data.objectKey).not.toBe("user-a/board-a/logo");
+  });
+
+  it("does not copy anything for nodes without a blob", async () => {
+    setupLookups(
+      storedNode({
+        id: "n1",
+        type: "text",
+        data: { kind: "text", text: "hi" },
+      }),
+      BOARD_A,
+    );
+    setupInsert();
+    await duplicateNode({
+      nodeId: "n1",
+      boardId: "board-a",
+      position: { x: 0, y: 0 },
+    });
+    expect(mockCopyBlob).not.toHaveBeenCalled();
+  });
+
+  it("deletes the copied blob when the insert fails", async () => {
+    setupLookups(
+      storedNode({
+        id: "img-1",
+        type: "image",
+        data: { kind: "image", objectKey: "user-a/board-a/logo" },
+      }),
+      BOARD_A,
+    );
+    const failing = chainable(undefined);
+    failing.values = vi.fn().mockRejectedValue(new Error("insert failed"));
+    db.insert.mockReturnValue(failing);
+
+    await expect(
+      duplicateNode({
+        nodeId: "img-1",
+        boardId: "board-a",
+        position: { x: 0, y: 0 },
+      }),
+    ).rejects.toThrow("insert failed");
+    expect(mockDeleteBlob).toHaveBeenCalledWith(
+      "user-a/board-a/new-key-copied",
     );
   });
 

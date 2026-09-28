@@ -52,7 +52,16 @@ export async function GET(
     "Content-Length": String(result.blob.size),
     "Cache-Control": "private, no-cache",
     "Content-Disposition": `inline; filename="${nodeId}"`,
+    "X-Content-Type-Options": "nosniff",
   });
+  // Uploaded SVGs can carry script; sandbox them when opened directly. PDFs are
+  // exempt because a sandbox CSP breaks the browser's built-in PDF viewer.
+  if (result.blob.contentType !== "application/pdf") {
+    headers.set(
+      "Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    );
+  }
   if (result.blob.etag) headers.set("ETag", result.blob.etag);
 
   return new Response(result.stream as unknown as ReadableStream, { headers });

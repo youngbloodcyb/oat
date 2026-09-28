@@ -1,4 +1,4 @@
-import { del, head } from "@vercel/blob";
+import { copy, del, head } from "@vercel/blob";
 
 /** Build a collision-resistant, owner/board-scoped object key. */
 export function objectKeyFor(userId: string, boardId: string): string {
@@ -13,6 +13,21 @@ export async function blobExists(objectKey: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Copy a private blob to a new key, returning the stored pathname. */
+export async function copyBlob(
+  fromKey: string,
+  toKey: string,
+): Promise<string> {
+  // copy() drops metadata and our keys have no extension, so carry the type over.
+  const { contentType } = await head(fromKey);
+  const { pathname } = await copy(fromKey, toKey, {
+    access: "private",
+    contentType,
+    addRandomSuffix: true,
+  });
+  return pathname;
 }
 
 /** Best-effort blob deletion; logs instead of throwing so cleanup is retryable. */

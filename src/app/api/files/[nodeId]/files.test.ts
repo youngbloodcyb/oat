@@ -124,6 +124,40 @@ describe("GET /api/files/[nodeId]", () => {
     expect(res.headers.get("content-type")).toBe("image/png");
     expect(res.headers.get("etag")).toBe("abc123");
     expect(res.headers.get("cache-control")).toBe("private, no-cache");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("sandboxes SVGs so embedded script cannot run on the app origin", async () => {
+    allowNode({
+      id: "n1",
+      data: { kind: "image", objectKey: "user-a/board-a/logo" },
+    });
+    mockGet.mockResolvedValue({
+      statusCode: 200,
+      blob: { contentType: "image/svg+xml", size: 10, etag: "e" },
+      stream: new ReadableStream({ start: (c) => c.close() }),
+    } as any);
+    const [req, ctx] = makeReq("n1");
+    const res = await GET(req, ctx);
+    const csp = res.headers.get("content-security-policy");
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("sandbox");
+  });
+
+  it("does not sandbox PDFs, which would break the embedded viewer", async () => {
+    allowNode({
+      id: "n1",
+      data: { kind: "pdf", objectKey: "user-a/board-a/doc", name: "d.pdf" },
+    });
+    mockGet.mockResolvedValue({
+      statusCode: 200,
+      blob: { contentType: "application/pdf", size: 10, etag: "e" },
+      stream: new ReadableStream({ start: (c) => c.close() }),
+    } as any);
+    const [req, ctx] = makeReq("n1");
+    const res = await GET(req, ctx);
+    expect(res.headers.get("content-security-policy")).toBeNull();
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
   });
 
   it("requires cached files to be revalidated", async () => {
