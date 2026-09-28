@@ -28,9 +28,9 @@ export function RealtimePresence({
   status: "connecting" | "online" | "offline";
 }) {
   return (
-    <div className="fixed top-14 right-4 z-50 flex items-center gap-2 rounded-full border bg-card/95 px-2 py-1 shadow-sm backdrop-blur">
+    <div className="flex items-center gap-1.5">
       <output
-        className={`size-2 rounded-full ${
+        className={`size-2 shrink-0 rounded-full ${
           status === "online"
             ? "bg-emerald-500"
             : status === "connecting"
@@ -39,11 +39,11 @@ export function RealtimePresence({
         }`}
         aria-label={`Realtime ${status}`}
       />
-      <div className="flex -space-x-1.5">
+      <div className="flex -space-x-1">
         {members.slice(0, 5).map((member) => (
           <div
             key={member.userId}
-            className="flex size-7 items-center justify-center overflow-hidden rounded-full border-2 border-card text-[10px] font-semibold text-white"
+            className="flex size-5 items-center justify-center overflow-hidden rounded-full ring-2 ring-card text-[8px] font-semibold text-white"
             style={{ backgroundColor: colorFor(member.userId) }}
             title={`${member.name} (${member.role})`}
           >
@@ -61,7 +61,7 @@ export function RealtimePresence({
         ))}
       </div>
       {members.length > 5 && (
-        <span className="pr-1 text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           +{members.length - 5}
         </span>
       )}

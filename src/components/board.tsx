@@ -9,7 +9,13 @@ import {
 } from "@xyflow/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
@@ -36,16 +42,15 @@ import type { NodeSearchResult } from "@/services/search";
 const proOptions = { hideAttribution: true };
 
 function BoardCanvas({
-  boardId,
+  board,
   focusNodeId,
   canEdit,
-  isShared,
 }: {
-  boardId: string;
+  board: BoardDetail;
   focusNodeId?: string;
   canEdit: boolean;
-  isShared: boolean;
 }) {
+  const boardId = board.id;
   const router = useRouter();
   const { fitView, screenToFlowPosition } = useReactFlow<CanvasNode>();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -66,7 +71,7 @@ function BoardCanvas({
   // Unshared boards have nobody to sync with, so they never open a socket.
   const realtime = useBoardRealtime({
     boardId,
-    enabled: ready && isShared,
+    enabled: ready && board.isShared,
     canEdit,
   });
   const canvasNodes = useMemo(
@@ -144,7 +149,14 @@ function BoardCanvas({
 
   // Hold the canvas until the store holds this board's nodes, so we never
   // paint the previously-open board while the new one is loading.
-  if (!ready) return <Loading />;
+  if (!ready) {
+    return (
+      <>
+        <BoardAccessBar board={board} />
+        <Loading />
+      </>
+    );
+  }
 
   return (
     <div
@@ -184,9 +196,17 @@ function BoardCanvas({
         <Background gap={20} size={1} />
       </ReactFlow>
       <RealtimeCursors cursors={realtime.cursors} />
-      {isShared && (
-        <RealtimePresence members={realtime.members} status={realtime.status} />
-      )}
+      <BoardAccessBar
+        board={board}
+        presence={
+          board.isShared && (
+            <RealtimePresence
+              members={realtime.members}
+              status={realtime.status}
+            />
+          )
+        }
+      />
       {canEdit && <NodeDock boardId={boardId} />}
       {canEdit && <TextEditorDrawer />}
       {canEdit && <ImageCropDialog boardId={boardId} />}
@@ -196,6 +216,38 @@ function BoardCanvas({
         onSelectNode={onSelectSearchResult}
       />
       <DockMenu onSearch={() => setCommandOpen(true)} />
+    </div>
+  );
+}
+
+function BoardAccessBar({
+  board,
+  presence,
+}: {
+  board: BoardDetail;
+  presence?: ReactNode;
+}) {
+  if (board.accessRole === "owner") {
+    return (
+      <div className="fixed top-4 right-24 z-50 flex items-center gap-2">
+        <SharingDialog boardId={board.id} boardName={board.name} />
+        {presence && (
+          <div className="flex h-6 items-center rounded-md border bg-card px-1.5 shadow-sm">
+            {presence}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="fixed top-4 right-24 z-50 flex h-6 items-center gap-2 rounded-md border bg-card px-2 text-xs font-medium shadow-sm">
+      {board.accessRole === "viewer" ? "View only" : "Can edit"}
+      {presence && (
+        <>
+          <span aria-hidden="true" className="h-3.5 w-px bg-border" />
+          {presence}
+        </>
+      )}
     </div>
   );
 }
@@ -230,22 +282,10 @@ export function Board({
         >
           <Link href="/">← Boards</Link>
         </Button>
-        {board.accessRole === "owner" ? (
-          <SharingDialog
-            boardId={board.id}
-            boardName={board.name}
-            className="fixed top-4 right-24 z-50"
-          />
-        ) : (
-          <div className="fixed top-4 right-24 z-50 rounded-md border bg-card px-2 py-1 text-xs font-medium capitalize shadow-sm">
-            {board.accessRole === "viewer" ? "View only" : "Can edit"}
-          </div>
-        )}
         <BoardCanvas
-          boardId={board.id}
+          board={board}
           focusNodeId={focusNodeId}
           canEdit={canEdit}
-          isShared={board.isShared}
         />
       </BoardPermissionsProvider>
     </ReactFlowProvider>
