@@ -252,6 +252,29 @@ function BoardAccessBar({
   );
 }
 
+function BackToBoardsButton() {
+  return (
+    <Button
+      asChild
+      variant="outline"
+      size="sm"
+      className="fixed top-4 left-4 z-50"
+    >
+      <Link href="/">← Boards</Link>
+    </Button>
+  );
+}
+
+/** Matches the board's own loading state so the handoff to `Board` is seamless. */
+export function BoardLoading() {
+  return (
+    <>
+      <BackToBoardsButton />
+      <Loading />
+    </>
+  );
+}
+
 export function BoardNotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4">
@@ -274,14 +297,7 @@ export function Board({
   return (
     <ReactFlowProvider>
       <BoardPermissionsProvider canEdit={canEdit}>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="fixed top-4 left-4 z-50"
-        >
-          <Link href="/">← Boards</Link>
-        </Button>
+        <BackToBoardsButton />
         <BoardCanvas
           board={board}
           focusNodeId={focusNodeId}

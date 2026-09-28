@@ -1,18 +1,35 @@
-import { Board, BoardNotFound } from "@/components/board";
+import { Suspense } from "react";
+import { Board, BoardLoading, BoardNotFound } from "@/components/board";
 import { getBoard } from "@/services/boards";
 
-// Reads the session and params before rendering; not yet converted to instant navigation.
-export const instant = false;
+export const instant = true;
 
-export default async function BoardPage({
+type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{ node?: string | string[] }>;
+
+export default function BoardPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ node?: string | string[] }>;
+  params: Params;
+  searchParams: SearchParams;
 }) {
-  const { id } = await params;
-  const { node } = await searchParams;
+  return (
+    <Suspense fallback={<BoardLoading />}>
+      <BoardLoader params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+// Access checks stay uncached so revoked shares take effect immediately.
+async function BoardLoader({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
+  const [{ id }, { node }] = await Promise.all([params, searchParams]);
   const board = await getBoard(id);
 
   if (!board) return <BoardNotFound />;
