@@ -1,6 +1,9 @@
 import { Board, BoardNotFound } from "@/components/board";
 import { getBoard } from "@/services/boards";
 
+// Reads the session and params before rendering; not yet converted to instant navigation.
+export const instant = false;
+
 export default async function BoardPage({
   params,
   searchParams,

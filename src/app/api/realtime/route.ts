@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth-server";
 import { registerRealtimeConnection } from "@/lib/realtime-server";
 import { requireBoardAccess } from "@/services/board-access";
 
-export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const querySchema = z.object({
