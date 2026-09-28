@@ -28,7 +28,7 @@ export function RealtimePresence({
   status: "connecting" | "online" | "offline";
 }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full border bg-card/95 px-2 py-1 shadow-sm backdrop-blur">
+    <div className="fixed top-14 right-4 z-50 flex items-center gap-2 rounded-full border bg-card/95 px-2 py-1 shadow-sm backdrop-blur">
       <output
         className={`size-2 rounded-full ${
           status === "online"
