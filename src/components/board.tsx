@@ -211,6 +211,7 @@ function BoardCanvas({
       {canEdit && <TextEditorDrawer />}
       {canEdit && <ImageCropDialog boardId={boardId} />}
       <BoardCommandMenu
+        boardId={boardId}
         open={commandOpen}
         onOpenChange={setCommandOpen}
         onSelectNode={onSelectSearchResult}

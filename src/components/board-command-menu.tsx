@@ -2,10 +2,12 @@
 
 import type { Icon } from "@phosphor-icons/react";
 import {
+  ArrowUpRightIcon,
   FilePdfIcon,
   ImageIcon,
   LinkIcon,
   SpinnerGapIcon,
+  SquaresFourIcon,
   TextTIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,7 +23,13 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import type { NodeType } from "@/db/schema";
-import { type NodeSearchResult, searchNodes } from "@/services/search";
+import {
+  type BoardSearchResults,
+  type NodeSearchResult,
+  searchNodesByBoard,
+} from "@/services/search";
+
+const NO_RESULTS: BoardSearchResults = { currentBoard: [], otherBoards: [] };
 
 const nodeIcons: Record<NodeType, Icon> = {
   link: LinkIcon,
@@ -40,6 +48,7 @@ export type BoardCommandAction = {
 };
 
 type BoardCommandMenuProps = {
+  boardId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectNode: (result: NodeSearchResult) => void;
@@ -47,19 +56,20 @@ type BoardCommandMenuProps = {
 };
 
 export function BoardCommandMenu({
+  boardId,
   open,
   onOpenChange,
   onSelectNode,
   actions = [],
 }: BoardCommandMenuProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<NodeSearchResult[]>([]);
+  const [results, setResults] = useState<BoardSearchResults>(NO_RESULTS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const close = useCallback(() => {
     setQuery("");
-    setResults([]);
+    setResults(NO_RESULTS);
     setLoading(false);
     setError(null);
     onOpenChange(false);
@@ -91,13 +101,13 @@ export function BoardCommandMenu({
     setError(null);
 
     const timeout = window.setTimeout(() => {
-      searchNodes({ query: normalizedQuery, limit: 20 })
+      searchNodesByBoard({ query: normalizedQuery, boardId, limit: 10 })
         .then((nextResults) => {
           if (!cancelled) setResults(nextResults);
         })
         .catch(() => {
           if (!cancelled) {
-            setResults([]);
+            setResults(NO_RESULTS);
             setError("Node search is unavailable. Please try again.");
           }
         })
@@ -110,7 +120,7 @@ export function BoardCommandMenu({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [open, query]);
+  }, [boardId, open, query]);
 
   const visibleActions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -126,14 +136,20 @@ export function BoardCommandMenu({
   const onQueryChange = (value: string) => {
     setQuery(value);
     if (!value.trim()) {
-      setResults([]);
+      setResults(NO_RESULTS);
       setLoading(false);
       setError(null);
     }
   };
 
   const hasQuery = query.trim().length > 0;
-  const showNodes = hasQuery && !loading && !error && results.length > 0;
+  const resultCount = results.currentBoard.length + results.otherBoards.length;
+  const showNodes = hasQuery && !loading && !error && resultCount > 0;
+
+  const selectNode = (result: NodeSearchResult) => {
+    close();
+    onSelectNode(result);
+  };
 
   return (
     <CommandDialog
@@ -197,41 +213,84 @@ export function BoardCommandMenu({
             </div>
           )}
 
-          {hasQuery && !loading && !error && results.length === 0 && (
+          {hasQuery && !loading && !error && resultCount === 0 && (
             <CommandEmpty>No nodes found.</CommandEmpty>
           )}
 
           {showNodes && (
-            <CommandGroup heading="Nodes">
-              {results.map((result) => {
-                const NodeIcon = nodeIcons[result.type];
-                return (
-                  <CommandItem
+            <CommandGroup heading="On this board">
+              {results.currentBoard.length === 0 ? (
+                <div className="px-2.5 py-2 text-xs text-muted-foreground">
+                  No matches on this board.
+                </div>
+              ) : (
+                results.currentBoard.map((result) => (
+                  <NodeResultItem
                     key={result.nodeId}
-                    value={`node:${result.nodeId}`}
-                    onSelect={() => {
-                      close();
-                      onSelectNode(result);
-                    }}
-                    className="items-start py-2"
-                  >
-                    <NodeIcon className="mt-0.5" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-medium">
-                        {result.title}
-                      </span>
-                      <span className="block truncate text-muted-foreground">
-                        {result.boardName}
-                        {result.excerpt ? ` · ${result.excerpt}` : ""}
-                      </span>
-                    </span>
-                  </CommandItem>
-                );
-              })}
+                    result={result}
+                    onSelect={selectNode}
+                  />
+                ))
+              )}
             </CommandGroup>
+          )}
+
+          {showNodes && results.otherBoards.length > 0 && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="In other boards">
+                {results.otherBoards.map((result) => (
+                  <NodeResultItem
+                    key={result.nodeId}
+                    result={result}
+                    onSelect={selectNode}
+                    inOtherBoard
+                  />
+                ))}
+              </CommandGroup>
+            </>
           )}
         </CommandList>
       </Command>
     </CommandDialog>
+  );
+}
+
+function NodeResultItem({
+  result,
+  onSelect,
+  inOtherBoard = false,
+}: {
+  result: NodeSearchResult;
+  onSelect: (result: NodeSearchResult) => void;
+  inOtherBoard?: boolean;
+}) {
+  const NodeIcon = nodeIcons[result.type];
+  return (
+    <CommandItem
+      value={`node:${result.nodeId}`}
+      onSelect={() => onSelect(result)}
+      className="items-start py-2"
+    >
+      <NodeIcon className="mt-0.5" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium">{result.title}</span>
+        {result.excerpt && (
+          <span className="block truncate text-muted-foreground">
+            {result.excerpt}
+          </span>
+        )}
+      </span>
+      {inOtherBoard && (
+        <span
+          className="flex max-w-[40%] shrink-0 items-center gap-1 rounded-sm border bg-muted/50 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+          title={`Opens ${result.boardName}`}
+        >
+          <SquaresFourIcon className="size-3 shrink-0" />
+          <span className="truncate">{result.boardName}</span>
+          <ArrowUpRightIcon className="size-3 shrink-0" />
+        </span>
+      )}
+    </CommandItem>
   );
 }

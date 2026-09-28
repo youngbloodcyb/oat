@@ -1,6 +1,6 @@
 "use server";
 
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import type { NodeData, NodeType } from "@/db/schema";
@@ -45,6 +45,20 @@ type SearchRow = {
   semanticMatch: boolean;
 };
 
+export type BoardSearchResults = {
+  currentBoard: NodeSearchResult[];
+  otherBoards: NodeSearchResult[];
+};
+
+type BoardScope = { boardId: string; mode: "only" | "exclude" };
+
+function boardFilter(column: SQL, scope: BoardScope | undefined): SQL {
+  if (!scope) return sql``;
+  return scope.mode === "only"
+    ? sql`AND ${column} = ${scope.boardId}`
+    : sql`AND ${column} <> ${scope.boardId}`;
+}
+
 export async function searchNodes(
   input: SearchNodesInput,
 ): Promise<NodeSearchResult[]> {
@@ -56,23 +70,66 @@ export async function searchNodes(
   if (!query) return [];
 
   const queryEmbedding = JSON.stringify(await embedSearchQuery(query));
+  return runSearch({
+    userId: user.id,
+    query,
+    queryEmbedding,
+    limit,
+    scope: boardId ? { boardId, mode: "only" } : undefined,
+  });
+}
+
+/**
+ * Ranks the current board separately from the rest, so matches elsewhere
+ * can't crowd the current board's matches out of a shared top-N.
+ */
+export async function searchNodesByBoard(
+  input: SearchNodesInput & { boardId: string },
+): Promise<BoardSearchResults> {
+  const user = await requireUser();
+  const parsed = searchInputSchema.required({ boardId: true }).safeParse(input);
+  if (!parsed.success) throw new Error("Invalid search query");
+
+  const { query, boardId, limit } = parsed.data;
+  if (!query) return { currentBoard: [], otherBoards: [] };
+
+  const queryEmbedding = JSON.stringify(await embedSearchQuery(query));
+  const base = { userId: user.id, query, queryEmbedding, limit };
+  const [currentBoard, otherBoards] = await Promise.all([
+    runSearch({ ...base, scope: { boardId, mode: "only" } }),
+    runSearch({ ...base, scope: { boardId, mode: "exclude" } }),
+  ]);
+  return { currentBoard, otherBoards };
+}
+
+async function runSearch({
+  userId,
+  query,
+  queryEmbedding,
+  limit,
+  scope,
+}: {
+  userId: string;
+  query: string;
+  queryEmbedding: string;
+  limit: number;
+  scope?: BoardScope;
+}): Promise<NodeSearchResult[]> {
   const candidateLimit = Math.min(Math.max(limit * 5, 50), 200);
-  const semanticBoardFilter = boardId
-    ? sql`AND e.board_id = ${boardId}`
-    : sql``;
-  const keywordBoardFilter = boardId ? sql`AND n.board_id = ${boardId}` : sql``;
-  const finalBoardFilter = boardId ? sql`AND n.board_id = ${boardId}` : sql``;
+  const semanticBoardFilter = boardFilter(sql`e.board_id`, scope);
+  const keywordBoardFilter = boardFilter(sql`n.board_id`, scope);
+  const finalBoardFilter = boardFilter(sql`n.board_id`, scope);
 
   const result = await db.execute<SearchRow>(sql`
     WITH accessible_boards AS (
       SELECT b.id
       FROM boards b
-      WHERE b.user_id = ${user.id}
+      WHERE b.user_id = ${userId}
         OR EXISTS (
           SELECT 1
           FROM board_shares bs
           WHERE bs.board_id = b.id
-            AND bs.user_id = ${user.id}
+            AND bs.user_id = ${userId}
         )
     ),
     semantic_candidates AS (

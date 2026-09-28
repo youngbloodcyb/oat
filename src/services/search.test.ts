@@ -21,7 +21,7 @@ vi.mock("@/db", () => ({
 }));
 
 import { PgDialect } from "drizzle-orm/pg-core";
-import { searchNodes } from "./search";
+import { searchNodes, searchNodesByBoard } from "./search";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -117,6 +117,57 @@ describe("searchNodes", () => {
     await expect(searchNodes({ query: "hello", limit: 51 })).rejects.toThrow(
       "Invalid search query",
     );
+    expect(mocks.embedSearchQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("searchNodesByBoard", () => {
+  it("embeds once and ranks the current board separately from the others", async () => {
+    await searchNodesByBoard({ query: "anthropic", boardId: "board-a" });
+
+    expect(mocks.embedSearchQuery).toHaveBeenCalledTimes(1);
+    expect(mocks.execute).toHaveBeenCalledTimes(2);
+    const [only, exclude] = mocks.execute.mock.calls.map(
+      ([statement]) => new PgDialect().sqlToQuery(statement).sql,
+    );
+    expect(only).toContain("e.board_id =");
+    expect(only).not.toContain("<>");
+    expect(exclude).toContain("e.board_id <>");
+    expect(exclude).toContain("n.board_id <>");
+    expect(exclude).toContain("WITH accessible_boards AS");
+  });
+
+  it("splits rows into current-board and other-board results", async () => {
+    const row = (nodeId: string, boardId: string) => ({
+      nodeId,
+      boardId,
+      boardName: boardId,
+      type: "text",
+      data: { kind: "text", text: nodeId },
+      excerpt: nodeId,
+      positionX: 0,
+      positionY: 0,
+      score: 0.01,
+      keywordMatch: true,
+      semanticMatch: false,
+    });
+    mocks.execute
+      .mockResolvedValueOnce({ rows: [row("here", "board-a")] })
+      .mockResolvedValueOnce({ rows: [row("there", "board-b")] });
+
+    const results = await searchNodesByBoard({
+      query: "anthropic",
+      boardId: "board-a",
+    });
+
+    expect(results.currentBoard.map((r) => r.nodeId)).toEqual(["here"]);
+    expect(results.otherBoards.map((r) => r.nodeId)).toEqual(["there"]);
+  });
+
+  it("returns empty groups for a blank query without embedding it", async () => {
+    await expect(
+      searchNodesByBoard({ query: "  ", boardId: "board-a" }),
+    ).resolves.toEqual({ currentBoard: [], otherBoards: [] });
     expect(mocks.embedSearchQuery).not.toHaveBeenCalled();
   });
 });
