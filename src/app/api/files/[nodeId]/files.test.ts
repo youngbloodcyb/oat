@@ -134,11 +134,13 @@ describe("GET /api/files/[nodeId]", () => {
     });
     mockGet.mockResolvedValue({
       statusCode: 200,
-      blob: { contentType: "image/svg+xml", size: 10, etag: "e" },
+      // Blob reports size 0 for compressed transfers of text types like SVG.
+      blob: { contentType: "image/svg+xml", size: 0, etag: "e" },
       stream: new ReadableStream({ start: (c) => c.close() }),
     } as any);
     const [req, ctx] = makeReq("n1");
     const res = await GET(req, ctx);
+    expect(res.headers.get("content-length")).toBeNull();
     const csp = res.headers.get("content-security-policy");
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("sandbox");

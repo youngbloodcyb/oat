@@ -49,7 +49,6 @@ export async function GET(
 
   const headers = new Headers({
     "Content-Type": result.blob.contentType,
-    "Content-Length": String(result.blob.size),
     "Cache-Control": "private, no-cache",
     "Content-Disposition": `inline; filename="${nodeId}"`,
     "X-Content-Type-Options": "nosniff",
