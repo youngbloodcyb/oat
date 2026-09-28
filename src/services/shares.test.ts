@@ -12,6 +12,10 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("@/lib/realtime-redis", () => ({
+  publishAccessEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/db", () => ({
   db: {
     select: vi.fn(),
@@ -24,6 +28,7 @@ vi.mock("@/db", () => ({
 import { db as database } from "@/db";
 import type { Board, User } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
+import { publishAccessEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess } from "@/services/board-access";
 import {
   addBoardShare,
@@ -35,6 +40,7 @@ import {
 const db = database as unknown as Record<string, ReturnType<typeof vi.fn>>;
 const mockRequireUser = vi.mocked(requireUser);
 const mockRequireBoardAccess = vi.mocked(requireBoardAccess);
+const mockPublishAccessEvent = vi.mocked(publishAccessEvent);
 
 function chainable(value: unknown) {
   const promise = Promise.resolve(value) as Promise<unknown> &
@@ -115,6 +121,12 @@ describe("board shares", () => {
       role: "editor",
     });
     expect(insert.onConflictDoUpdate).toHaveBeenCalled();
+    expect(mockPublishAccessEvent).toHaveBeenCalledWith({
+      type: "access.changed",
+      boardId: board.id,
+      userId: "editor-a",
+      role: "editor",
+    });
   });
 
   it("rejects email addresses without an account", async () => {
@@ -155,6 +167,18 @@ describe("board shares", () => {
 
     expect(update.where).toHaveBeenCalled();
     expect(remove.where).toHaveBeenCalled();
+    expect(mockPublishAccessEvent).toHaveBeenNthCalledWith(1, {
+      type: "access.changed",
+      boardId: board.id,
+      userId: "member-a",
+      role: "viewer",
+    });
+    expect(mockPublishAccessEvent).toHaveBeenNthCalledWith(2, {
+      type: "access.changed",
+      boardId: board.id,
+      userId: "member-a",
+      role: null,
+    });
   });
 
   it("prevents non-owners from managing shares", async () => {

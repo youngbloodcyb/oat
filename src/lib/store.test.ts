@@ -169,3 +169,58 @@ describe("node selection", () => {
     expect(useBoardStore.getState().selectedNode?.id).toBe("node-1");
   });
 });
+
+describe("remote node events", () => {
+  it("upserts without duplicating and preserves local selection", () => {
+    useBoardStore
+      .getState()
+      .setNodes("board-a", [{ ...persistedNode(), selected: true }]);
+
+    useBoardStore.getState().upsertRemoteNode({
+      id: "node-1",
+      type: "text",
+      position: { x: 80, y: 90 },
+      data: { kind: "text", text: "remote" },
+    });
+
+    expect(useBoardStore.getState().nodes).toHaveLength(1);
+    expect(useBoardStore.getState().nodes[0]).toMatchObject({
+      selected: true,
+      position: { x: 80, y: 90 },
+      data: { kind: "text", text: "remote" },
+    });
+  });
+
+  it("does not move a node while this client is dragging it", () => {
+    useBoardStore
+      .getState()
+      .setNodes("board-a", [{ ...persistedNode(), dragging: true }]);
+
+    useBoardStore
+      .getState()
+      .previewRemoteNodePositions([
+        { id: "node-1", position: { x: 500, y: 600 } },
+      ]);
+
+    expect(useBoardStore.getState().nodes[0]?.position).toEqual({
+      x: 10,
+      y: 20,
+    });
+  });
+
+  it("removes remote nodes and closes node-specific UI", () => {
+    useBoardStore.getState().setNodes("board-a", [persistedNode()]);
+    useBoardStore.setState({
+      editingTextNodeId: "node-1",
+      croppingImageNodeId: "node-1",
+    });
+
+    useBoardStore.getState().removeRemoteNode("node-1");
+
+    expect(useBoardStore.getState()).toMatchObject({
+      nodes: [],
+      editingTextNodeId: null,
+      croppingImageNodeId: null,
+    });
+  });
+});

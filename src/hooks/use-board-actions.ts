@@ -7,6 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { objectKeyFor } from "@/lib/blob";
 import type { NodeDraft } from "@/lib/board-utils";
 import { extractPdfMarkdown } from "@/lib/pdf-parser";
+import { getRealtimeClientId } from "@/lib/realtime-client-id";
 import {
   type BoardNode,
   DEFAULT_STYLE,
@@ -27,7 +28,7 @@ import {
 
 /** Add a freshly created node to the local store so it shows immediately. */
 function addNodeLocal(node: BoardNode) {
-  useBoardStore.setState((s) => ({ nodes: [...s.nodes, node] }));
+  useBoardStore.getState().upsertRemoteNode(node);
 }
 
 function pendingPreview(draft: NodeDraft): PendingNodePreview {
@@ -71,9 +72,11 @@ function positionsMatch(a: XYPosition, b: XYPosition): boolean {
  */
 export function useUpdateNodeData() {
   return useCallback((nodeId: string, data: NodeData) => {
-    updateNode({ nodeId, data }).catch((e) =>
-      console.error("node update failed", e),
-    );
+    updateNode({
+      nodeId,
+      data,
+      realtimeSourceId: getRealtimeClientId(),
+    }).catch((e) => console.error("node update failed", e));
   }, []);
 }
 
@@ -185,6 +188,7 @@ export function useBoardActions(boardId: string) {
           position: beforeCreate.position,
           data,
           style: DEFAULT_STYLE[draft.kind],
+          realtimeSourceId: getRealtimeClientId(),
         });
 
         const latest = useBoardStore
@@ -202,9 +206,11 @@ export function useBoardActions(boardId: string) {
           } as BoardNode);
 
         if (promoted && !positionsMatch(finalPosition, beforeCreate.position)) {
-          updateNode({ nodeId, position: finalPosition }).catch((error) =>
-            console.error("node move failed", error),
-          );
+          updateNode({
+            nodeId,
+            position: finalPosition,
+            realtimeSourceId: getRealtimeClientId(),
+          }).catch((error) => console.error("node move failed", error));
         }
       } catch (error) {
         const pendingStillVisible = useBoardStore
@@ -266,9 +272,11 @@ export function useBoardActions(boardId: string) {
   );
 
   const moveNode = useCallback((nodeId: string, position: XYPosition) => {
-    updateNode({ nodeId, position }).catch((e) =>
-      console.error("node move failed", e),
-    );
+    updateNode({
+      nodeId,
+      position,
+      realtimeSourceId: getRealtimeClientId(),
+    }).catch((e) => console.error("node move failed", e));
   }, []);
 
   const removeNode = useCallback((nodeId: string) => {
@@ -276,15 +284,17 @@ export function useBoardActions(boardId: string) {
       nodes: s.nodes.filter((n) => n.id !== nodeId),
       selectedNode: s.selectedNode?.id === nodeId ? null : s.selectedNode,
     }));
-    removeNodeAction(nodeId).catch((e) =>
+    removeNodeAction(nodeId, getRealtimeClientId()).catch((e) =>
       console.error("node remove failed", e),
     );
   }, []);
 
   const setNodeData = useCallback((nodeId: string, data: NodeData) => {
-    updateNode({ nodeId, data }).catch((e) =>
-      console.error("node update failed", e),
-    );
+    updateNode({
+      nodeId,
+      data,
+      realtimeSourceId: getRealtimeClientId(),
+    }).catch((e) => console.error("node update failed", e));
   }, []);
 
   const resizeNode = useCallback(
@@ -293,9 +303,12 @@ export function useBoardActions(boardId: string) {
       style: { width: number; height: number },
       position?: XYPosition,
     ) => {
-      updateNode({ nodeId, style, position }).catch((e) =>
-        console.error("node resize failed", e),
-      );
+      updateNode({
+        nodeId,
+        style,
+        position,
+        realtimeSourceId: getRealtimeClientId(),
+      }).catch((e) => console.error("node resize failed", e));
     },
     [],
   );
@@ -308,6 +321,7 @@ export function useBoardActions(boardId: string) {
           boardId,
           position: { x: node.position.x + 24, y: node.position.y + 24 },
           style: nodeSize(node),
+          realtimeSourceId: getRealtimeClientId(),
         });
         addNodeLocal({
           ...node,
@@ -335,9 +349,11 @@ export function useBoardActions(boardId: string) {
         n.id === node.id ? { ...n, zIndex: nextZ } : n,
       ),
     }));
-    updateNode({ nodeId: node.id, zIndex: nextZ }).catch((e) =>
-      console.error("node reorder failed", e),
-    );
+    updateNode({
+      nodeId: node.id,
+      zIndex: nextZ,
+      realtimeSourceId: getRealtimeClientId(),
+    }).catch((e) => console.error("node reorder failed", e));
   }, []);
 
   const setImageFit = useCallback(
@@ -349,9 +365,11 @@ export function useBoardActions(boardId: string) {
             : n,
         ),
       }));
-      patchImageNode({ nodeId, fit }).catch((e) =>
-        console.error("image fit failed", e),
-      );
+      patchImageNode({
+        nodeId,
+        fit,
+        realtimeSourceId: getRealtimeClientId(),
+      }).catch((e) => console.error("image fit failed", e));
     },
     [],
   );
@@ -364,7 +382,11 @@ export function useBoardActions(boardId: string) {
         type: blob.type || "image/png",
       });
       const objectKey = await uploadFile(file);
-      await patchImageNode({ nodeId, objectKey });
+      await patchImageNode({
+        nodeId,
+        objectKey,
+        realtimeSourceId: getRealtimeClientId(),
+      });
       useBoardStore.setState((s) => ({
         nodes: s.nodes.map((node) =>
           node.id === nodeId && node.data.kind === "image"

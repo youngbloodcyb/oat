@@ -13,6 +13,10 @@ vi.mock("@/lib/blob", () => ({
   ),
 }));
 
+vi.mock("@/lib/realtime-redis", () => ({
+  publishDurableBoardEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/services/board-access", () => ({
   findBoardAccess: vi.fn(),
 }));

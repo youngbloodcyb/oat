@@ -14,6 +14,10 @@ vi.mock("@/lib/blob", () => ({
   ),
 }));
 
+vi.mock("@/lib/realtime-redis", () => ({
+  publishDurableBoardEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/services/board-access", () => ({
   requireBoardAccess: vi.fn(),
   requireNodeAccess: vi.fn(),
@@ -42,6 +46,7 @@ import { db as _db } from "@/db";
 import type { NodeData, StoredNode } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
 import { blobExists, deleteBlob } from "@/lib/blob";
+import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess, requireNodeAccess } from "@/services/board-access";
 import {
   createNode,
@@ -56,6 +61,7 @@ const db = _db as any;
 const mockRequireUser = vi.mocked(requireUser);
 const mockBlobExists = vi.mocked(blobExists);
 const mockDeleteBlob = vi.mocked(deleteBlob);
+const mockPublishDurableBoardEvent = vi.mocked(publishDurableBoardEvent);
 const mockStart = vi.mocked(start);
 const mockWorkflowEmbedNode = vi.mocked(workflowEmbedNode);
 const mockRequireBoardAccess = vi.mocked(requireBoardAccess);
@@ -277,6 +283,14 @@ describe("createNode", () => {
       }),
     );
     expect(mockStart).toHaveBeenCalledWith(mockWorkflowEmbedNode, [id]);
+    expect(mockPublishDurableBoardEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "node.created",
+        boardId: "board-a",
+        actorUserId: USER_A.id,
+        node: expect.objectContaining({ id, type: "link" }),
+      }),
+    );
   });
 
   it("creates a text node", async () => {

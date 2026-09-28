@@ -18,10 +18,15 @@ import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
 import { nodeTypes } from "@/components/nodes";
+import {
+  RealtimeCursors,
+  RealtimePresence,
+} from "@/components/realtime-collaboration";
 import { SharingDialog } from "@/components/sharing-dialog";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
 import { useBoardActions } from "@/hooks/use-board-actions";
+import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
 import { type CanvasNode, useBoardStore } from "@/lib/store";
@@ -40,7 +45,7 @@ function BoardCanvas({
   canEdit: boolean;
 }) {
   const router = useRouter();
-  const { fitView } = useReactFlow<CanvasNode>();
+  const { fitView, screenToFlowPosition } = useReactFlow<CanvasNode>();
   const [commandOpen, setCommandOpen] = useState(false);
   const ready = useBoardSync(boardId);
   const { moveNode, removeNode, resizeNode } = useBoardActions(boardId);
@@ -56,6 +61,7 @@ function BoardCanvas({
     })),
   );
   const { onDragOver, onDrop } = useCanvasInputs(boardId, canEdit);
+  const realtime = useBoardRealtime({ boardId, enabled: ready, canEdit });
   const canvasNodes = useMemo(
     () => [...nodes, ...pendingNodes],
     [nodes, pendingNodes],
@@ -134,7 +140,15 @@ function BoardCanvas({
   if (!ready) return <Loading />;
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
+    <div
+      style={{ width: "100vw", height: "100vh" }}
+      onPointerMove={(event) => {
+        realtime.sendCursor(
+          screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        );
+      }}
+      onPointerLeave={() => realtime.sendCursor(null)}
+    >
       <ReactFlow<CanvasNode>
         nodes={canvasNodes}
         nodeTypes={nodeTypes}
@@ -143,6 +157,14 @@ function BoardCanvas({
         onDrop={canEdit ? onDrop : undefined}
         nodesDraggable={canEdit}
         deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
+        onNodeDrag={(_, __, dragged) => {
+          if (!canEdit) return;
+          realtime.sendDrag(
+            dragged
+              .filter((node) => node.type !== "pending")
+              .map((node) => ({ id: node.id, position: node.position })),
+          );
+        }}
         onNodeDragStop={(_, __, dragged) => {
           if (!canEdit) return;
           dragged.forEach((n) => {
@@ -154,6 +176,8 @@ function BoardCanvas({
       >
         <Background gap={20} size={1} />
       </ReactFlow>
+      <RealtimeCursors cursors={realtime.cursors} />
+      <RealtimePresence members={realtime.members} status={realtime.status} />
       {canEdit && <NodeDock boardId={boardId} />}
       {canEdit && <TextEditorDrawer />}
       {canEdit && <ImageCropDialog boardId={boardId} />}

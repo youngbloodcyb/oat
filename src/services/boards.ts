@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { boardShares, boards, nodes } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
 import { deleteBlob, nodeObjectKey } from "@/lib/blob";
+import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { type BoardAccessRole, findBoardAccess } from "@/services/board-access";
 
 export type AccessibleBoard = {
@@ -64,6 +65,7 @@ export async function createBoard(name: string): Promise<string> {
 export async function updateBoard(
   boardId: string,
   patch: { name?: string },
+  realtimeSourceId?: string,
 ): Promise<void> {
   const user = await requireUser();
   const result = await db
@@ -71,6 +73,12 @@ export async function updateBoard(
     .set(patch)
     .where(and(eq(boards.id, boardId), eq(boards.userId, user.id)));
   if (result.rowCount === 0) throw new Error("Board not found");
+  await publishDurableBoardEvent({
+    type: "board.updated",
+    boardId,
+    sourceId: realtimeSourceId,
+    actorUserId: user.id,
+  });
 }
 
 export async function deleteBoard(boardId: string): Promise<void> {
@@ -85,5 +93,10 @@ export async function deleteBoard(boardId: string): Promise<void> {
     .filter((k): k is string => !!k);
   const result = await db.delete(boards).where(owned);
   if (result.rowCount === 0) throw new Error("Board not found");
+  await publishDurableBoardEvent({
+    type: "board.deleted",
+    boardId,
+    actorUserId: user.id,
+  });
   await Promise.all(keys.map(deleteBlob));
 }

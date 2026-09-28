@@ -320,10 +320,13 @@ describe("replaceImage", () => {
       result.current.replaceImage("image-1", "data:image/png;base64,crop"),
     );
 
-    expect(mocks.patchImageNode).toHaveBeenCalledWith({
-      nodeId: "image-1",
-      objectKey: "user-a/board-a/crop.png",
-    });
+    expect(mocks.patchImageNode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: "image-1",
+        objectKey: "user-a/board-a/crop.png",
+        realtimeSourceId: expect.any(String),
+      }),
+    );
     expect(useBoardStore.getState().nodes[0]?.data).toEqual({
       kind: "image",
       src: "/api/files/image-1?v=1234",

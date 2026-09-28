@@ -6,16 +6,16 @@ import { start } from "workflow/api";
 import { db } from "@/db";
 import {
   type ClientNode,
-  type ClientNodeData,
   type NodeData,
   type NodeType,
   nodes,
-  type StoredNode,
 } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
 import { blobExists, deleteBlob, nodeObjectKey } from "@/lib/blob";
+import { toClientNode, toClientNodeData } from "@/lib/client-node";
 import { nodeEmbeddingSourceKey } from "@/lib/embedding-source";
 import { nodeSearchText } from "@/lib/node-search";
+import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess, requireNodeAccess } from "@/services/board-access";
 
 async function scheduleNodeEmbedding(nodeId: string): Promise<void> {
@@ -24,39 +24,6 @@ async function scheduleNodeEmbedding(nodeId: string): Promise<void> {
   } catch (error) {
     console.error("embedding workflow failed to start", { nodeId, error });
   }
-}
-
-function toClientData(data: NodeData, nodeId: string): ClientNodeData {
-  if (data.kind === "image") {
-    return {
-      kind: "image",
-      src: data.objectKey ? `/api/files/${nodeId}` : (data.url ?? ""),
-      alt: data.alt,
-      fit: data.fit,
-    };
-  }
-  if (data.kind === "pdf") {
-    return {
-      kind: "pdf",
-      src: data.objectKey ? `/api/files/${nodeId}` : (data.url ?? ""),
-      name: data.name,
-    };
-  }
-  return data;
-}
-
-function toClientNode(row: StoredNode): ClientNode {
-  return {
-    id: row.id,
-    type: row.type,
-    position: { x: row.positionX, y: row.positionY },
-    style:
-      row.width != null && row.height != null
-        ? { width: row.width, height: row.height }
-        : undefined,
-    zIndex: row.zIndex ?? undefined,
-    data: toClientData(row.data, row.id),
-  };
 }
 
 export async function listNodesByBoard(boardId: string): Promise<ClientNode[]> {
@@ -72,6 +39,7 @@ export async function createNode(input: {
   position: { x: number; y: number };
   data: NodeData;
   style?: { width: number; height: number };
+  realtimeSourceId?: string;
 }): Promise<string> {
   const user = await requireUser();
   const { board } = await requireBoardAccess(input.boardId, user.id, "edit");
@@ -101,6 +69,19 @@ export async function createNode(input: {
     searchText,
     embeddingSource,
   });
+  await publishDurableBoardEvent({
+    type: "node.created",
+    boardId: input.boardId,
+    sourceId: input.realtimeSourceId,
+    actorUserId: user.id,
+    node: {
+      id,
+      type: input.type,
+      position: input.position,
+      style: input.style,
+      data: toClientNodeData(input.data, id),
+    },
+  });
   if (embeddingSource) await scheduleNodeEmbedding(id);
   return id;
 }
@@ -111,9 +92,10 @@ export async function updateNode(input: {
   data?: NodeData;
   style?: { width: number; height: number };
   zIndex?: number;
+  realtimeSourceId?: string;
 }): Promise<void> {
   const user = await requireUser();
-  await requireNodeAccess(input.nodeId, user.id, "edit");
+  const { node } = await requireNodeAccess(input.nodeId, user.id, "edit");
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (input.position) {
     set.positionX = input.position.x;
@@ -135,6 +117,28 @@ export async function updateNode(input: {
     .set(set)
     .where(eq(nodes.id, input.nodeId));
   if (result.rowCount === 0) throw new Error("Node not found");
+  await publishDurableBoardEvent({
+    type: "node.updated",
+    boardId: node.boardId,
+    sourceId: input.realtimeSourceId,
+    actorUserId: user.id,
+    node: toClientNode({
+      ...node,
+      positionX: input.position?.x ?? node.positionX,
+      positionY: input.position?.y ?? node.positionY,
+      width: input.style?.width ?? node.width,
+      height: input.style?.height ?? node.height,
+      zIndex: input.zIndex ?? node.zIndex,
+      data: input.data ?? node.data,
+      searchText:
+        typeof set.searchText === "string" ? set.searchText : node.searchText,
+      embeddingSource:
+        typeof set.embeddingSource === "string" || set.embeddingSource === null
+          ? set.embeddingSource
+          : node.embeddingSource,
+      updatedAt: set.updatedAt as Date,
+    }),
+  });
   if (input.data) await scheduleNodeEmbedding(input.nodeId);
 }
 
@@ -142,6 +146,7 @@ export async function patchImageNode(input: {
   nodeId: string;
   fit?: "cover" | "contain";
   objectKey?: string;
+  realtimeSourceId?: string;
 }): Promise<void> {
   const user = await requireUser();
   const { node } = await requireNodeAccess(input.nodeId, user.id, "edit");
@@ -176,16 +181,40 @@ export async function patchImageNode(input: {
     .where(eq(nodes.id, input.nodeId));
   if (result.rowCount === 0) throw new Error("Node not found");
 
+  await publishDurableBoardEvent({
+    type: "node.updated",
+    boardId: node.boardId,
+    sourceId: input.realtimeSourceId,
+    actorUserId: user.id,
+    node: toClientNode({
+      ...node,
+      data: next,
+      searchText,
+      embeddingSource,
+      updatedAt: new Date(),
+    }),
+  });
+
   if (input.objectKey !== undefined) await scheduleNodeEmbedding(input.nodeId);
   if (oldKey) await deleteBlob(oldKey);
 }
 
-export async function removeNode(nodeId: string): Promise<void> {
+export async function removeNode(
+  nodeId: string,
+  realtimeSourceId?: string,
+): Promise<void> {
   const user = await requireUser();
   const { node } = await requireNodeAccess(nodeId, user.id, "edit");
   const key = nodeObjectKey(node.data as NodeData);
   const result = await db.delete(nodes).where(eq(nodes.id, nodeId));
   if (result.rowCount === 0) throw new Error("Node not found");
+  await publishDurableBoardEvent({
+    type: "node.deleted",
+    boardId: node.boardId,
+    sourceId: realtimeSourceId,
+    actorUserId: user.id,
+    nodeId,
+  });
   if (key) await deleteBlob(key);
 }
 
@@ -194,6 +223,7 @@ export async function duplicateNode(input: {
   boardId: string;
   position: { x: number; y: number };
   style?: { width: number; height: number };
+  realtimeSourceId?: string;
 }): Promise<string> {
   const user = await requireUser();
   const { node: src } = await requireNodeAccess(input.nodeId, user.id, "edit");
@@ -214,6 +244,24 @@ export async function duplicateNode(input: {
     data: src.data,
     searchText,
     embeddingSource,
+  });
+  await publishDurableBoardEvent({
+    type: "node.created",
+    boardId: input.boardId,
+    sourceId: input.realtimeSourceId,
+    actorUserId: user.id,
+    node: {
+      id,
+      type: src.type,
+      position: input.position,
+      style:
+        input.style ??
+        (src.width != null && src.height != null
+          ? { width: src.width, height: src.height }
+          : undefined),
+      zIndex: src.zIndex ?? undefined,
+      data: toClientNodeData(src.data, id),
+    },
   });
   if (embeddingSource) await scheduleNodeEmbedding(id);
   return id;

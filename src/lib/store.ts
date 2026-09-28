@@ -156,6 +156,11 @@ type BoardState = {
   updatePendingNode: (id: string, patch: Partial<PendingNodeData>) => void;
   removePendingNode: (id: string) => void;
   promotePendingNode: (id: string, node: BoardNode) => boolean;
+  upsertRemoteNode: (node: BoardNode) => void;
+  removeRemoteNode: (id: string) => void;
+  previewRemoteNodePositions: (
+    nodes: Array<{ id: string; position: { x: number; y: number } }>,
+  ) => void;
   // Local, optimistic data merge (persisted separately via a mutation).
   updateNodeData: (id: string, patch: Partial<BoardNodeData>) => void;
 };
@@ -271,6 +276,46 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       ),
     });
     return true;
+  },
+  upsertRemoteNode: (incoming) => {
+    const existing = get().nodes.find((node) => node.id === incoming.id);
+    const next = existing
+      ? ({
+          ...existing,
+          ...incoming,
+          selected: existing.selected,
+          dragging: existing.dragging,
+          measured: existing.measured,
+          position: existing.dragging ? existing.position : incoming.position,
+        } as BoardNode)
+      : incoming;
+    const nodes = existing
+      ? get().nodes.map((node) => (node.id === incoming.id ? next : node))
+      : [...get().nodes, next];
+    set({
+      nodes,
+      selectedNode:
+        get().selectedNode?.id === incoming.id ? next : get().selectedNode,
+    });
+  },
+  removeRemoteNode: (id) => {
+    set({
+      nodes: get().nodes.filter((node) => node.id !== id),
+      selectedNode: get().selectedNode?.id === id ? null : get().selectedNode,
+      editingTextNodeId:
+        get().editingTextNodeId === id ? null : get().editingTextNodeId,
+      croppingImageNodeId:
+        get().croppingImageNodeId === id ? null : get().croppingImageNodeId,
+    });
+  },
+  previewRemoteNodePositions: (incoming) => {
+    const positions = new Map(incoming.map((item) => [item.id, item.position]));
+    set({
+      nodes: get().nodes.map((node) => {
+        const position = positions.get(node.id);
+        return position && !node.dragging ? { ...node, position } : node;
+      }) as BoardNode[],
+    });
   },
   updateNodeData: (id, patch) => {
     set({

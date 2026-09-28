@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { type BoardShareRole, boardShares, user as users } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
+import { publishAccessEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess } from "@/services/board-access";
 
 const boardIdSchema = z.string().min(1).max(200);
@@ -82,6 +83,12 @@ export async function addBoardShare(input: {
       target: [boardShares.boardId, boardShares.userId],
       set: { role: parsed.role, updatedAt: new Date() },
     });
+  await publishAccessEvent({
+    type: "access.changed",
+    boardId: parsed.boardId,
+    userId: target.id,
+    role: parsed.role,
+  });
   refreshBoardPaths(parsed.boardId);
 }
 
@@ -110,6 +117,12 @@ export async function updateBoardShare(input: {
       ),
     );
   if (result.rowCount === 0) throw new Error("Shared member not found");
+  await publishAccessEvent({
+    type: "access.changed",
+    boardId: parsed.boardId,
+    userId: parsed.userId,
+    role: parsed.role,
+  });
   refreshBoardPaths(parsed.boardId);
 }
 
@@ -135,5 +148,11 @@ export async function removeBoardShare(input: {
       ),
     );
   if (result.rowCount === 0) throw new Error("Shared member not found");
+  await publishAccessEvent({
+    type: "access.changed",
+    boardId: parsed.boardId,
+    userId: parsed.userId,
+    role: null,
+  });
   refreshBoardPaths(parsed.boardId);
 }
