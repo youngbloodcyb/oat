@@ -4,6 +4,7 @@ import "@xyflow/react/dist/style.css";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
+import { Agentation } from "agentation";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Toaster />
+        {process.env.NODE_ENV === "development" && <Agentation />}
       </body>
     </html>
   );
