@@ -30,6 +30,7 @@ import {
   RealtimePresence,
 } from "@/components/realtime-collaboration";
 import { SharingDialog } from "@/components/sharing-dialog";
+import { SignOutButton } from "@/components/sign-out-button";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
@@ -231,7 +232,7 @@ function Topbar({
   presence?: ReactNode;
 }) {
   return (
-    <div className="absolute inset-x-0 top-0 z-50 flex h-14 items-center justify-between gap-2 border-b bg-card/80 px-4 backdrop-blur">
+    <div className="absolute inset-x-0 top-0 z-50 flex h-10 items-center justify-between gap-2 border-b bg-card/80 px-4 backdrop-blur">
       <BackToBoardsButton className="" />
       <div className="flex items-center gap-3">
         <span className="text-xs font-medium text-muted-foreground">
@@ -248,6 +249,7 @@ function Topbar({
           <SharingDialog boardId={board.id} boardName={board.name} />
         )}
         <ChatSidebarTrigger />
+        <SignOutButton />
       </div>
     </div>
   );

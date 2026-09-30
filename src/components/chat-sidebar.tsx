@@ -16,7 +16,7 @@ export function ChatSidebar() {
 
   return (
     <Sidebar side="right">
-      <SidebarHeader className="flex-row items-center justify-between">
+      <SidebarHeader className="h-10 flex-row items-center justify-between">
         <h2 className="px-2 text-sm font-medium">Chat</h2>
         <Button variant="ghost" size="icon-sm" onClick={toggleSidebar}>
           <XIcon />
