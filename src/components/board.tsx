@@ -19,6 +19,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
+import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
 import { DockMenu } from "@/components/dock-menu";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
@@ -31,6 +32,7 @@ import {
 import { SharingDialog } from "@/components/sharing-dialog";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
@@ -217,6 +219,8 @@ function BoardCanvas({
         onSelectNode={onSelectSearchResult}
       />
       <DockMenu onSearch={() => setCommandOpen(true)} />
+      <ChatSidebarTrigger />
+      <ChatSidebar />
     </div>
   );
 }
@@ -298,12 +302,14 @@ export function Board({
   return (
     <ReactFlowProvider>
       <BoardPermissionsProvider canEdit={canEdit}>
-        <BackToBoardsButton />
-        <BoardCanvas
-          board={board}
-          focusNodeId={focusNodeId}
-          canEdit={canEdit}
-        />
+        <SidebarProvider defaultOpen={false}>
+          <BackToBoardsButton />
+          <BoardCanvas
+            board={board}
+            focusNodeId={focusNodeId}
+            canEdit={canEdit}
+          />
+        </SidebarProvider>
       </BoardPermissionsProvider>
     </ReactFlowProvider>
   );
