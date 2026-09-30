@@ -33,7 +33,7 @@ export function NodeDock({ boardId }: { boardId: string }) {
   return (
     <div
       className={cn(
-        "fixed right-6 top-1/2 z-40 -translate-y-1/2",
+        "absolute right-6 top-1/2 z-40 -translate-y-1/2",
         "flex flex-col items-center gap-1 rounded-lg border bg-card/80 p-1 shadow-md backdrop-blur",
         "transition-all duration-200 ease-out",
         visible

@@ -32,7 +32,7 @@ import {
 import { SharingDialog } from "@/components/sharing-dialog";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
@@ -161,8 +161,8 @@ function BoardCanvas({
   }
 
   return (
-    <div
-      style={{ width: "100vw", height: "100vh" }}
+    <SidebarInset
+      className="relative h-svh w-full overflow-hidden transition-[width] duration-200 ease-linear"
       onPointerMove={(event) => {
         realtime.sendCursor(
           screenToFlowPosition({ x: event.clientX, y: event.clientY }),
@@ -220,8 +220,7 @@ function BoardCanvas({
       />
       <DockMenu onSearch={() => setCommandOpen(true)} />
       <ChatSidebarTrigger />
-      <ChatSidebar />
-    </div>
+    </SidebarInset>
   );
 }
 
@@ -234,7 +233,7 @@ function BoardAccessBar({
 }) {
   if (board.accessRole === "owner") {
     return (
-      <div className="fixed top-4 right-24 z-50 flex items-center gap-2">
+      <div className="absolute top-4 right-24 z-50 flex items-center gap-2">
         <SharingDialog boardId={board.id} boardName={board.name} />
         {presence && (
           <div className="flex h-6 items-center rounded-md border bg-card px-1.5 shadow-sm">
@@ -245,7 +244,7 @@ function BoardAccessBar({
     );
   }
   return (
-    <div className="fixed top-4 right-24 z-50 flex h-6 items-center gap-2 rounded-md border bg-card px-2 text-xs font-medium shadow-sm">
+    <div className="absolute top-4 right-24 z-50 flex h-6 items-center gap-2 rounded-md border bg-card px-2 text-xs font-medium shadow-sm">
       {board.accessRole === "viewer" ? "View only" : "Can edit"}
       {presence && (
         <>
@@ -302,14 +301,13 @@ export function Board({
   return (
     <ReactFlowProvider>
       <BoardPermissionsProvider canEdit={canEdit}>
-        <SidebarProvider defaultOpen={false}>
-          <BackToBoardsButton />
-          <BoardCanvas
-            board={board}
-            focusNodeId={focusNodeId}
-            canEdit={canEdit}
-          />
-        </SidebarProvider>
+        <BackToBoardsButton />
+        <BoardCanvas
+          board={board}
+          focusNodeId={focusNodeId}
+          canEdit={canEdit}
+        />
+        <ChatSidebar />
       </BoardPermissionsProvider>
     </ReactFlowProvider>
   );
