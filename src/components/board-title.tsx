@@ -26,12 +26,17 @@ export function BoardTitle({
   const [value, setValue] = useState(name);
   const [saving, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const editingRef = useRef(editing);
+  editingRef.current = editing;
 
-  // Pick up the server-refreshed name once it lands, but never while the
-  // person is actively typing.
+  // Pick up an externally-changed name (another collaborator renamed the
+  // board, or our own save round-tripped through the server) but never
+  // while the person is actively typing — and never just because `editing`
+  // flipped, or committing would flash the stale name before the refresh
+  // lands.
   useEffect(() => {
-    if (!editing) setValue(name);
-  }, [name, editing]);
+    if (!editingRef.current) setValue(name);
+  }, [name]);
 
   useEffect(() => {
     if (editing) inputRef.current?.select();
@@ -48,6 +53,7 @@ export function BoardTitle({
       setValue(name);
       return;
     }
+    setValue(trimmed);
     startTransition(async () => {
       try {
         await updateBoard(boardId, { name: trimmed }, getRealtimeClientId());
