@@ -269,7 +269,7 @@ function Topbar({
 function BackToBoardsButton() {
   return (
     <Button asChild variant="outline" size="sm">
-      <Link href="/">← Boards</Link>
+      <Link href="/">← Home</Link>
     </Button>
   );
 }

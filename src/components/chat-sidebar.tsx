@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatCircleIcon, XIcon } from "@phosphor-icons/react";
+import type { CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -15,9 +16,11 @@ export function ChatSidebar() {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <Sidebar side="right">
-      <SidebarHeader className="h-10 flex-row items-center justify-between">
-        <h2 className="px-2 text-sm font-medium">Chat</h2>
+    <Sidebar
+      side="right"
+      style={{ "--sidebar": "var(--background)" } as CSSProperties}
+    >
+      <SidebarHeader className="h-10 flex-row items-center justify-end">
         <Button variant="ghost" size="icon-sm" onClick={toggleSidebar}>
           <XIcon />
           <span className="sr-only">Close chat</span>

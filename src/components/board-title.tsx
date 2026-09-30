@@ -43,7 +43,7 @@ export function BoardTitle({
   }, [editing]);
 
   if (!editable) {
-    return <span className="text-sm font-medium">{name}</span>;
+    return <span className="text-xs font-medium">{name}</span>;
   }
 
   const commit = () => {
@@ -81,7 +81,7 @@ export function BoardTitle({
             setEditing(false);
           }
         }}
-        className="h-7 w-56 text-sm font-medium"
+        className="h-7 w-56 text-xs font-medium"
       />
     );
   }
@@ -91,7 +91,7 @@ export function BoardTitle({
       type="button"
       onClick={() => setEditing(true)}
       disabled={saving}
-      className="group flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium hover:bg-accent disabled:opacity-50"
+      className="group flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
     >
       {value}
       <PencilSimpleIcon className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
