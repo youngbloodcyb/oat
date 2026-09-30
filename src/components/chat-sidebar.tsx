@@ -7,6 +7,7 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarRail,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -22,6 +23,7 @@ export function ChatSidebar() {
           <span className="sr-only">Close chat</span>
         </Button>
       </SidebarHeader>
+      <SidebarSeparator className="mx-0 w-full" />
       <SidebarContent />
       <SidebarRail />
     </Sidebar>
@@ -32,12 +34,7 @@ export function ChatSidebarTrigger() {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="absolute top-4 right-44 z-50"
-      onClick={toggleSidebar}
-    >
+    <Button variant="outline" size="sm" onClick={toggleSidebar}>
       <ChatCircleIcon />
       Chat
     </Button>

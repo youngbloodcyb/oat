@@ -154,7 +154,7 @@ function BoardCanvas({
   if (!ready) {
     return (
       <>
-        <BoardAccessBar board={board} />
+        <Topbar board={board} />
         <Loading />
       </>
     );
@@ -198,7 +198,7 @@ function BoardCanvas({
         <Background gap={20} size={1} />
       </ReactFlow>
       <RealtimeCursors cursors={realtime.cursors} />
-      <BoardAccessBar
+      <Topbar
         board={board}
         presence={
           board.isShared && (
@@ -219,50 +219,47 @@ function BoardCanvas({
         onSelectNode={onSelectSearchResult}
       />
       <DockMenu onSearch={() => setCommandOpen(true)} />
-      <ChatSidebarTrigger />
     </SidebarInset>
   );
 }
 
-function BoardAccessBar({
+function Topbar({
   board,
   presence,
 }: {
   board: BoardDetail;
   presence?: ReactNode;
 }) {
-  if (board.accessRole === "owner") {
-    return (
-      <div className="absolute top-4 right-24 z-50 flex items-center gap-2">
-        <SharingDialog boardId={board.id} boardName={board.name} />
-        {presence && (
-          <div className="flex h-6 items-center rounded-md border bg-card px-1.5 shadow-sm">
-            {presence}
-          </div>
-        )}
-      </div>
-    );
-  }
   return (
-    <div className="absolute top-4 right-24 z-50 flex h-6 items-center gap-2 rounded-md border bg-card px-2 text-xs font-medium shadow-sm">
-      {board.accessRole === "viewer" ? "View only" : "Can edit"}
-      {presence && (
-        <>
-          <span aria-hidden="true" className="h-3.5 w-px bg-border" />
-          {presence}
-        </>
-      )}
+    <div className="absolute inset-x-0 top-0 z-50 flex h-14 items-center justify-between gap-2 border-b bg-card/80 px-4 backdrop-blur">
+      <BackToBoardsButton className="" />
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-medium text-muted-foreground">
+          {board.accessRole === "owner"
+            ? null
+            : board.accessRole === "viewer"
+              ? "View only"
+              : "Can edit"}
+        </span>
+        {presence && (
+          <div className="flex items-center gap-1.5">{presence}</div>
+        )}
+        {board.accessRole === "owner" && (
+          <SharingDialog boardId={board.id} boardName={board.name} />
+        )}
+        <ChatSidebarTrigger />
+      </div>
     </div>
   );
 }
 
-function BackToBoardsButton() {
+function BackToBoardsButton({ className }: { className?: string }) {
   return (
     <Button
       asChild
       variant="outline"
       size="sm"
-      className="fixed top-4 left-4 z-50"
+      className={className ?? "fixed top-4 left-4 z-50"}
     >
       <Link href="/">← Boards</Link>
     </Button>
@@ -301,7 +298,6 @@ export function Board({
   return (
     <ReactFlowProvider>
       <BoardPermissionsProvider canEdit={canEdit}>
-        <BackToBoardsButton />
         <BoardCanvas
           board={board}
           focusNodeId={focusNodeId}
