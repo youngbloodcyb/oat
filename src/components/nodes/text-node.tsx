@@ -7,9 +7,9 @@ import type { TextNode as TextNodeType } from "@/lib/store";
 // Read-only on the canvas. Editing happens in the drawer (dock → "Edit text").
 // `data.text` holds HTML; the `.tiptap.ProseMirror` classes apply the same
 // typography styles as the editor (loaded via the SimpleEditor module).
-export function TextNode({ data, selected }: NodeProps<TextNodeType>) {
+export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
   return (
-    <NodeShell selected={selected} minWidth={120} minHeight={80}>
+    <NodeShell id={id} selected={selected} minWidth={120} minHeight={80}>
       {data.text ? (
         <div
           className="tiptap ProseMirror h-full w-full overflow-auto p-3 text-sm"

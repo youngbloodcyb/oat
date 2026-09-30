@@ -1,5 +1,5 @@
-@import '../styles/_variables.scss';
-@import '../styles/_keyframe-animations.scss';
+@import "../styles/_variables.scss";
+@import "../styles/_keyframe-animations.scss";
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -136,4 +136,27 @@
 .react-flow__node.draggable.dragging,
 .react-flow__node.selectable {
   cursor: default;
+}
+
+/* Staggered entrance for nodes on the board's initial load: fade + blur-in.
+   See node-entrance.tsx for the stagger. */
+@keyframes node-enter {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+.animate-node-enter {
+  animation: node-enter 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-node-enter {
+    animation: none;
+  }
 }

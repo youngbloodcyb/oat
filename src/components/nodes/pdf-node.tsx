@@ -4,9 +4,10 @@ import type { NodeProps } from "@xyflow/react";
 import { NodeShell } from "@/components/nodes/node-shell";
 import type { PdfNode as PdfNodeType } from "@/lib/store";
 
-export function PdfNode({ data, selected }: NodeProps<PdfNodeType>) {
+export function PdfNode({ id, data, selected }: NodeProps<PdfNodeType>) {
   return (
     <NodeShell
+      id={id}
       selected={selected}
       minWidth={200}
       minHeight={200}

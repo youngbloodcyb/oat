@@ -31,7 +31,7 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   } catch {}
 
   return (
-    <NodeShell selected={selected} minWidth={160} minHeight={120}>
+    <NodeShell id={id} selected={selected} minWidth={160} minHeight={120}>
       {data.og?.image && (
         <img src={data.og.image} alt="" className="h-32 w-full object-cover" />
       )}

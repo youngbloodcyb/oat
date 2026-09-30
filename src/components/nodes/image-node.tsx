@@ -6,7 +6,7 @@ import { NodeShell } from "@/components/nodes/node-shell";
 import type { ImageNode as ImageNodeType } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-export function ImageNode({ data, selected }: NodeProps<ImageNodeType>) {
+export function ImageNode({ id, data, selected }: NodeProps<ImageNodeType>) {
   const [loaded, setLoaded] = useState(false);
 
   // Re-blur whenever the node's image changes; the node is only ever
@@ -18,7 +18,13 @@ export function ImageNode({ data, selected }: NodeProps<ImageNodeType>) {
   }, [data.src]);
 
   return (
-    <NodeShell selected={selected} minWidth={80} minHeight={80} keepAspectRatio>
+    <NodeShell
+      id={id}
+      selected={selected}
+      minWidth={80}
+      minHeight={80}
+      keepAspectRatio
+    >
       <div className="relative h-full w-full bg-muted">
         {/* biome-ignore lint/performance/noImgElement: blob/API-route URLs cannot use the Next image optimizer */}
         <img

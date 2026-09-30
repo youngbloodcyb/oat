@@ -27,6 +27,7 @@ import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
 import { nodeTypes } from "@/components/nodes";
+import { NodeEntranceProvider } from "@/components/nodes/node-entrance";
 import {
   RealtimeCursors,
   RealtimePresence,
@@ -173,33 +174,35 @@ function BoardCanvas({
       }}
       onPointerLeave={() => realtime.sendCursor(null)}
     >
-      <ReactFlow<CanvasNode>
-        nodes={canvasNodes}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onDragOver={canEdit ? onDragOver : undefined}
-        onDrop={canEdit ? onDrop : undefined}
-        nodesDraggable={canEdit}
-        deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
-        onNodeDrag={(_, __, dragged) => {
-          if (!canEdit) return;
-          realtime.sendDrag(
-            dragged
-              .filter((node) => node.type !== "pending")
-              .map((node) => ({ id: node.id, position: node.position })),
-          );
-        }}
-        onNodeDragStop={(_, __, dragged) => {
-          if (!canEdit) return;
-          dragged.forEach((n) => {
-            if (n.type !== "pending") moveNode(n.id, n.position);
-          });
-        }}
-        fitView
-        proOptions={proOptions}
-      >
-        <Background gap={20} size={1} />
-      </ReactFlow>
+      <NodeEntranceProvider nodeIds={nodes.map((n) => n.id)}>
+        <ReactFlow<CanvasNode>
+          nodes={canvasNodes}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onDragOver={canEdit ? onDragOver : undefined}
+          onDrop={canEdit ? onDrop : undefined}
+          nodesDraggable={canEdit}
+          deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
+          onNodeDrag={(_, __, dragged) => {
+            if (!canEdit) return;
+            realtime.sendDrag(
+              dragged
+                .filter((node) => node.type !== "pending")
+                .map((node) => ({ id: node.id, position: node.position })),
+            );
+          }}
+          onNodeDragStop={(_, __, dragged) => {
+            if (!canEdit) return;
+            dragged.forEach((n) => {
+              if (n.type !== "pending") moveNode(n.id, n.position);
+            });
+          }}
+          fitView
+          proOptions={proOptions}
+        >
+          <Background gap={20} size={1} />
+        </ReactFlow>
+      </NodeEntranceProvider>
       <RealtimeCursors cursors={realtime.cursors} />
       <Topbar
         board={board}

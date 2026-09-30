@@ -3,6 +3,7 @@
 import { ResizeIcon } from "@phosphor-icons/react";
 import { NodeResizeControl } from "@xyflow/react";
 import { useBoardPermissions } from "@/components/board-permissions";
+import { useNodeEntranceDelay } from "@/components/nodes/node-entrance";
 import { cn } from "@/lib/utils";
 
 const resizeControlStyle = {
@@ -24,6 +25,7 @@ const selectedGlow =
  * resize handle. Node components supply just their own content as children.
  */
 export function NodeShell({
+  id,
   selected,
   minWidth,
   minHeight,
@@ -31,6 +33,7 @@ export function NodeShell({
   className,
   children,
 }: {
+  id: string;
   selected?: boolean;
   minWidth: number;
   minHeight: number;
@@ -39,13 +42,20 @@ export function NodeShell({
   children: React.ReactNode;
 }) {
   const { canEdit } = useBoardPermissions();
+  const entranceDelay = useNodeEntranceDelay(id);
   return (
     <div
       className={cn(
         "relative h-full w-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-shadow",
+        entranceDelay !== null && "animate-node-enter",
         selected && selectedGlow,
         className,
       )}
+      style={
+        entranceDelay !== null
+          ? { animationDelay: `${entranceDelay}ms` }
+          : undefined
+      }
     >
       {canEdit && (
         <NodeResizeControl
