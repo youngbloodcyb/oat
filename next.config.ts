@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withWorkflow } from "workflow/next";
+import { withEve } from "eve/next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -11,4 +12,4 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["ioredis", "ws"],
 };
 
-export default withWorkflow(nextConfig);
+export default withEve(withWorkflow(nextConfig));
