@@ -20,6 +20,7 @@ import { useShallow } from "zustand/react/shallow";
 import { AppTopbar } from "@/components/app-topbar";
 import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
+import { BoardTitle } from "@/components/board-title";
 import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
 import { DockMenu } from "@/components/dock-menu";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
@@ -235,6 +236,13 @@ function Topbar({
   return (
     <AppTopbar
       left={<BackToBoardsButton />}
+      center={
+        <BoardTitle
+          boardId={board.id}
+          name={board.name}
+          editable={board.accessRole === "owner"}
+        />
+      }
       right={
         <>
           <span className="text-xs font-medium text-muted-foreground">
