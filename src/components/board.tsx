@@ -17,6 +17,7 @@ import {
   useState,
 } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { AppTopbar } from "@/components/app-topbar";
 import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
 import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
@@ -33,7 +34,6 @@ import { SharingDialog } from "@/components/sharing-dialog";
 import { SignOutButton } from "@/components/sign-out-button";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
@@ -233,10 +233,10 @@ function Topbar({
   presence?: ReactNode;
 }) {
   return (
-    <div className="absolute inset-x-0 top-0 z-50">
-      <div className="flex h-10 items-center justify-between gap-2 bg-card/80 px-4 backdrop-blur">
-        <BackToBoardsButton className="" />
-        <div className="flex items-center gap-3">
+    <AppTopbar
+      left={<BackToBoardsButton />}
+      right={
+        <>
           <span className="text-xs font-medium text-muted-foreground">
             {board.accessRole === "owner"
               ? null
@@ -252,21 +252,15 @@ function Topbar({
           )}
           <ChatSidebarTrigger />
           <SignOutButton />
-        </div>
-      </div>
-      <Separator />
-    </div>
+        </>
+      }
+    />
   );
 }
 
-function BackToBoardsButton({ className }: { className?: string }) {
+function BackToBoardsButton() {
   return (
-    <Button
-      asChild
-      variant="outline"
-      size="sm"
-      className={className ?? "fixed top-4 left-4 z-50"}
-    >
+    <Button asChild variant="outline" size="sm">
       <Link href="/">← Boards</Link>
     </Button>
   );
@@ -276,7 +270,7 @@ function BackToBoardsButton({ className }: { className?: string }) {
 export function BoardLoading() {
   return (
     <>
-      <BackToBoardsButton />
+      <AppTopbar left={<BackToBoardsButton />} />
       <Loading />
     </>
   );
