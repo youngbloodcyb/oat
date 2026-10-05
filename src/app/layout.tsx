@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { Agentation } from "agentation";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -44,6 +45,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         {process.env.NODE_ENV === "development" && <Agentation />}
+        <Analytics />
       </body>
     </html>
   );
