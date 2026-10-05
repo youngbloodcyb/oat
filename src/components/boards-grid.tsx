@@ -11,6 +11,9 @@ const cardClassName =
 // A fixed locale keeps server and client renders identical.
 const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "long" });
 
+// Bleeds through the card's p-4 so the line touches both edges.
+const separatorClassName = "-mx-4 data-horizontal:w-[calc(100%+2rem)]";
+
 export async function BoardsGrid() {
   const boards = await listBoards();
 
@@ -30,7 +33,7 @@ export async function BoardsGrid() {
             href={`/${b.id}`}
             className={`${cardClassName} transition-colors hover:bg-muted`}
           >
-            <Separator className="mb-3" />
+            <Separator className={`${separatorClassName} mb-3`} />
             <div className="truncate text-sm font-medium">{b.name}</div>
             {/* Right padding leaves room for the options button. */}
             <div className="flex items-center gap-2 pr-8 text-xs text-muted-foreground">
@@ -43,7 +46,7 @@ export async function BoardsGrid() {
             </div>
           </Link>
           {/* Outside the link: buttons can't be nested inside an anchor. */}
-          <div className="absolute right-3 bottom-3">
+          <div className="absolute right-2 bottom-2">
             <BoardCardMenu
               boardId={b.id}
               boardName={b.name}
@@ -63,7 +66,7 @@ export function BoardsGridSkeleton() {
         // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
         <li key={i}>
           <div className={`${cardClassName} gap-2`}>
-            <Separator className="mb-1" />
+            <Separator className={`${separatorClassName} mb-1`} />
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-3 w-1/3" />
           </div>

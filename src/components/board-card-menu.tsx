@@ -61,8 +61,8 @@ export function BoardCardMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Board options">
-            <DotsThreeIcon weight="bold" />
+          <Button variant="ghost" size="icon-lg" aria-label="Board options">
+            <DotsThreeIcon weight="bold" className="size-5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
