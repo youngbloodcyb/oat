@@ -1,4 +1,5 @@
-import { SpinnerIcon } from "@phosphor-icons/react/dist/ssr";
+import { blue } from "@radix-ui/colors";
+import { Blocks } from "loading-dev";
 
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,7 @@ export function Loading({
       )}
       {...props}
     >
-      <SpinnerIcon className="size-5 animate-spin" />
+      <Blocks color={blue.blue12} size={24} className="opacity-75" />
       <span className="text-sm">{label}</span>
     </div>
   );
