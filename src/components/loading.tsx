@@ -12,7 +12,7 @@ export function Loading({
       role="status"
       aria-live="polite"
       className={cn(
-        "flex min-h-screen flex-col items-center justify-center gap-2 text-muted-foreground",
+        "flex min-h-screen w-full flex-col items-center justify-center gap-2 text-muted-foreground",
         className,
       )}
       {...props}

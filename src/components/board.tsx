@@ -312,7 +312,7 @@ export function BoardLoading() {
 
 export function BoardNotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center gap-4">
       <p className="text-muted-foreground">This board doesn&rsquo;t exist.</p>
       <Button asChild variant="outline">
         <Link href="/">Back to boards</Link>
