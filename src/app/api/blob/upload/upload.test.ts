@@ -51,7 +51,7 @@ beforeEach(() => {
         clientPayload: string,
       ) => Promise<unknown>;
     }) => {
-      await onBeforeGenerateToken("user-a/board-a/file.png", "board-a");
+      await onBeforeGenerateToken("board-a/user-a/file.png", "board-a");
       return { ok: true } as any;
     },
   );
@@ -61,7 +61,7 @@ describe("POST /api/blob/upload", () => {
   it("rejects when not authenticated", async () => {
     mockRequireUser.mockRejectedValue(new Error("Unauthorized"));
     await expect(
-      POST(makeReq({ pathname: "user-a/board-a/file.png" })),
+      POST(makeReq({ pathname: "board-a/user-a/file.png" })),
     ).rejects.toThrow("Unauthorized");
   });
 
@@ -75,17 +75,17 @@ describe("POST /api/blob/upload", () => {
           clientPayload: string,
         ) => Promise<unknown>;
       }) => {
-        await onBeforeGenerateToken("user-b/board-a/file.png", "board-a");
+        await onBeforeGenerateToken("board-a/user-b/file.png", "board-a");
         return { ok: true } as any;
       },
     );
     await expect(
-      POST(makeReq({ pathname: "user-b/board-a/file.png" })),
+      POST(makeReq({ pathname: "board-a/user-b/file.png" })),
     ).rejects.toThrow("Object key must be scoped to the selected board");
   });
 
   it("allows when the object key is scoped to the authenticated user", async () => {
-    const res = await POST(makeReq({ pathname: "user-a/board-a/file.png" }));
+    const res = await POST(makeReq({ pathname: "board-a/user-a/file.png" }));
     expect(res.status).toBe(200);
     expect(mockRequireBoardAccess).toHaveBeenCalledWith(
       "board-a",

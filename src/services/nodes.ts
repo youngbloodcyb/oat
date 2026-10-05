@@ -17,6 +17,7 @@ import {
   deleteBlob,
   nodeObjectKey,
   objectKeyFor,
+  uploadKeyPrefix,
 } from "@/lib/blob";
 import { toClientNode, toClientNodeData } from "@/lib/client-node";
 import { nodeEmbeddingSourceKey } from "@/lib/embedding-source";
@@ -52,7 +53,7 @@ export async function createNode(input: {
 
   const key = nodeObjectKey(input.data);
   if (key) {
-    if (!key.startsWith(`${user.id}/${input.boardId}/`)) {
+    if (!key.startsWith(uploadKeyPrefix(user.id, input.boardId))) {
       throw new Error("Upload does not belong to this board");
     }
     const exists = await blobExists(key);
@@ -162,7 +163,7 @@ export async function patchImageNode(input: {
   let oldKey: string | undefined;
   if (input.fit !== undefined) next.fit = input.fit;
   if (input.objectKey !== undefined) {
-    if (!input.objectKey.startsWith(`${user.id}/${node.boardId}/`)) {
+    if (!input.objectKey.startsWith(uploadKeyPrefix(user.id, node.boardId))) {
       throw new Error("Upload does not belong to this board");
     }
     if (!(await blobExists(input.objectKey))) {

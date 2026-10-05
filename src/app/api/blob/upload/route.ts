@@ -1,5 +1,6 @@
 import { handleUpload } from "@vercel/blob/client";
 import { requireUser } from "@/lib/auth-server";
+import { uploadKeyPrefix } from "@/lib/blob";
 import { MAX_UPLOAD_SIZE_BYTES } from "@/lib/upload-policy";
 import { requireBoardAccess } from "@/services/board-access";
 
@@ -11,7 +12,7 @@ export async function POST(req: Request): Promise<Response> {
       const user = await requireUser();
       if (!clientPayload) throw new Error("Board is required");
       await requireBoardAccess(clientPayload, user.id, "edit");
-      if (!pathname.startsWith(`${user.id}/${clientPayload}/`)) {
+      if (!pathname.startsWith(uploadKeyPrefix(user.id, clientPayload))) {
         throw new Error("Object key must be scoped to the selected board");
       }
       return {

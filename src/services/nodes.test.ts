@@ -9,8 +9,9 @@ vi.mock("@/lib/blob", () => ({
   copyBlob: vi.fn(async (_from: string, to: string) => `${to}-copied`),
   deleteBlob: vi.fn().mockResolvedValue(undefined),
   objectKeyFor: vi.fn(
-    (userId: string, boardId: string) => `${userId}/${boardId}/new-key`,
+    (userId: string, boardId: string) => `${boardId}/${userId}/new-key`,
   ),
+  uploadKeyPrefix: (userId: string, boardId: string) => `${boardId}/${userId}/`,
   nodeObjectKey: vi.fn((data: { kind: string; objectKey?: string }) =>
     data?.kind === "image" || data?.kind === "pdf"
       ? data?.objectKey
@@ -164,7 +165,7 @@ describe("listNodesByBoard", () => {
         storedNode({
           id: "img-1",
           type: "image",
-          data: { kind: "image", objectKey: "user-a/board-a/img1", alt: "hi" },
+          data: { kind: "image", objectKey: "board-a/user-a/img1", alt: "hi" },
         }),
       ]),
     );
@@ -185,7 +186,7 @@ describe("listNodesByBoard", () => {
           type: "pdf",
           data: {
             kind: "pdf",
-            objectKey: "user-a/board-a/doc.pdf",
+            objectKey: "board-a/user-a/doc.pdf",
             name: "doc",
             markdown: "# Private document contents",
           },
@@ -347,13 +348,13 @@ describe("createNode", () => {
       boardId: "board-a",
       type: "image",
       position: { x: 0, y: 0 },
-      data: { kind: "image", objectKey: "user-a/board-a/img1", alt: "pic" },
+      data: { kind: "image", objectKey: "board-a/user-a/img1", alt: "pic" },
     });
-    expect(mockBlobExists).toHaveBeenCalledWith("user-a/board-a/img1");
+    expect(mockBlobExists).toHaveBeenCalledWith("board-a/user-a/img1");
     expect(query.values).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "image",
-        data: { kind: "image", objectKey: "user-a/board-a/img1", alt: "pic" },
+        data: { kind: "image", objectKey: "board-a/user-a/img1", alt: "pic" },
         embeddingSource: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     );
@@ -368,7 +369,7 @@ describe("createNode", () => {
       boardId: "board-a",
       type: "image",
       position: { x: 0, y: 0 },
-      data: { kind: "image", objectKey: "user-a/board-a/unlabeled" },
+      data: { kind: "image", objectKey: "board-a/user-a/unlabeled" },
     });
 
     expect(query.values).toHaveBeenCalledWith(
@@ -387,13 +388,13 @@ describe("createNode", () => {
       boardId: "board-a",
       type: "pdf",
       position: { x: 0, y: 0 },
-      data: { kind: "pdf", objectKey: "user-a/board-a/doc.pdf", name: "doc" },
+      data: { kind: "pdf", objectKey: "board-a/user-a/doc.pdf", name: "doc" },
     });
-    expect(mockBlobExists).toHaveBeenCalledWith("user-a/board-a/doc.pdf");
+    expect(mockBlobExists).toHaveBeenCalledWith("board-a/user-a/doc.pdf");
     expect(query.values).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "pdf",
-        data: { kind: "pdf", objectKey: "user-a/board-a/doc.pdf", name: "doc" },
+        data: { kind: "pdf", objectKey: "board-a/user-a/doc.pdf", name: "doc" },
       }),
     );
   });
@@ -408,11 +409,28 @@ describe("createNode", () => {
         position: { x: 0, y: 0 },
         data: {
           kind: "image",
-          objectKey: "user-a/board-a/missing",
+          objectKey: "board-a/user-a/missing",
           alt: "pic",
         },
       }),
     ).rejects.toThrow("Upload not found");
+  });
+
+  it.each([
+    ["another user's upload", "board-a/user-b/img1"],
+    ["another board's upload", "board-b/user-a/img1"],
+    ["the pre-board-prefix key format", "user-a/board-a/img1"],
+  ])("rejects %s", async (_label, objectKey) => {
+    setupBoardLookup(BOARD_A);
+    await expect(
+      createNode({
+        boardId: "board-a",
+        type: "image",
+        position: { x: 0, y: 0 },
+        data: { kind: "image", objectKey },
+      }),
+    ).rejects.toThrow("Upload does not belong to this board");
+    expect(mockBlobExists).not.toHaveBeenCalled();
   });
 
   it("skips blob existence check for link and text nodes", async () => {
@@ -546,7 +564,7 @@ describe("patchImageNode", () => {
       storedNode({
         id: "img-1",
         type: "image",
-        data: { kind: "image", objectKey: "user-a/board-a/img1", alt: "a" },
+        data: { kind: "image", objectKey: "board-a/user-a/img1", alt: "a" },
       }),
     );
     setupUpdate(1);
@@ -554,7 +572,7 @@ describe("patchImageNode", () => {
     const setCall = (db.update as any).mock.results[0].value.set.mock
       .calls[0][0];
     expect(setCall.data.fit).toBe("contain");
-    expect(setCall.data.objectKey).toBe("user-a/board-a/img1");
+    expect(setCall.data.objectKey).toBe("board-a/user-a/img1");
     expect(mockDeleteBlob).not.toHaveBeenCalled();
     expect(mockStart).not.toHaveBeenCalled();
   });
@@ -564,16 +582,16 @@ describe("patchImageNode", () => {
       storedNode({
         id: "img-1",
         type: "image",
-        data: { kind: "image", objectKey: "user-a/board-a/old", alt: "a" },
+        data: { kind: "image", objectKey: "board-a/user-a/old", alt: "a" },
       }),
     );
     setupUpdate(1);
-    await patchImageNode({ nodeId: "img-1", objectKey: "user-a/board-a/new" });
+    await patchImageNode({ nodeId: "img-1", objectKey: "board-a/user-a/new" });
     const setCall = (db.update as any).mock.results[0].value.set.mock
       .calls[0][0];
-    expect(setCall.data.objectKey).toBe("user-a/board-a/new");
+    expect(setCall.data.objectKey).toBe("board-a/user-a/new");
     expect(setCall.data.url).toBeUndefined();
-    expect(mockDeleteBlob).toHaveBeenCalledWith("user-a/board-a/old");
+    expect(mockDeleteBlob).toHaveBeenCalledWith("board-a/user-a/old");
     expect(mockStart).toHaveBeenCalledWith(mockWorkflowEmbedNode, ["img-1"]);
   });
 
@@ -586,7 +604,7 @@ describe("patchImageNode", () => {
       }),
     );
     setupUpdate(1);
-    await patchImageNode({ nodeId: "img-1", objectKey: "user-a/board-a/new" });
+    await patchImageNode({ nodeId: "img-1", objectKey: "board-a/user-a/new" });
     expect(mockDeleteBlob).not.toHaveBeenCalled();
   });
 
@@ -595,7 +613,7 @@ describe("patchImageNode", () => {
       storedNode({
         id: "img-1",
         type: "image",
-        data: { kind: "image", objectKey: "user-a/board-a/old" },
+        data: { kind: "image", objectKey: "board-a/user-a/old" },
       }),
     );
     setupUpdate(0);
@@ -639,12 +657,12 @@ describe("removeNode", () => {
       storedNode({
         id: "img-1",
         type: "image",
-        data: { kind: "image", objectKey: "user-a/board-a/img1" },
+        data: { kind: "image", objectKey: "board-a/user-a/img1" },
       }),
     );
     setupDelete(1);
     await removeNode("img-1");
-    expect(mockDeleteBlob).toHaveBeenCalledWith("user-a/board-a/img1");
+    expect(mockDeleteBlob).toHaveBeenCalledWith("board-a/user-a/img1");
   });
 
   it("deletes a pdf node and cleans up its blob", async () => {
@@ -652,12 +670,12 @@ describe("removeNode", () => {
       storedNode({
         id: "pdf-1",
         type: "pdf",
-        data: { kind: "pdf", objectKey: "user-a/board-a/doc.pdf", name: "d" },
+        data: { kind: "pdf", objectKey: "board-a/user-a/doc.pdf", name: "d" },
       }),
     );
     setupDelete(1);
     await removeNode("pdf-1");
-    expect(mockDeleteBlob).toHaveBeenCalledWith("user-a/board-a/doc.pdf");
+    expect(mockDeleteBlob).toHaveBeenCalledWith("board-a/user-a/doc.pdf");
   });
 
   it("deletes a link node without blob cleanup", async () => {
@@ -802,7 +820,7 @@ describe("duplicateNode", () => {
   it("preserves private PDF markdown in the duplicated stored data", async () => {
     const data = {
       kind: "pdf" as const,
-      objectKey: "user-a/board-a/report.pdf",
+      objectKey: "board-a/user-a/report.pdf",
       name: "report.pdf",
       markdown: "# Quarterly report",
     };
@@ -817,7 +835,7 @@ describe("duplicateNode", () => {
 
     expect(query.values).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { ...data, objectKey: "user-a/board-a/new-key-copied" },
+        data: { ...data, objectKey: "board-a/user-a/new-key-copied" },
       }),
     );
   });
@@ -829,7 +847,7 @@ describe("duplicateNode", () => {
         type: "image",
         data: {
           kind: "image",
-          objectKey: "user-a/board-a/logo",
+          objectKey: "board-a/user-a/logo",
           alt: "logo.svg",
         },
       }),
@@ -844,12 +862,12 @@ describe("duplicateNode", () => {
     });
 
     expect(mockCopyBlob).toHaveBeenCalledWith(
-      "user-a/board-a/logo",
-      "user-a/board-a/new-key",
+      "board-a/user-a/logo",
+      "board-a/user-a/new-key",
     );
     const values = query.values.mock.calls[0][0];
-    expect(values.data.objectKey).toBe("user-a/board-a/new-key-copied");
-    expect(values.data.objectKey).not.toBe("user-a/board-a/logo");
+    expect(values.data.objectKey).toBe("board-a/user-a/new-key-copied");
+    expect(values.data.objectKey).not.toBe("board-a/user-a/logo");
   });
 
   it("does not copy anything for nodes without a blob", async () => {
@@ -875,7 +893,7 @@ describe("duplicateNode", () => {
       storedNode({
         id: "img-1",
         type: "image",
-        data: { kind: "image", objectKey: "user-a/board-a/logo" },
+        data: { kind: "image", objectKey: "board-a/user-a/logo" },
       }),
       BOARD_A,
     );
@@ -891,7 +909,7 @@ describe("duplicateNode", () => {
       }),
     ).rejects.toThrow("insert failed");
     expect(mockDeleteBlob).toHaveBeenCalledWith(
-      "user-a/board-a/new-key-copied",
+      "board-a/user-a/new-key-copied",
     );
   });
 
@@ -899,7 +917,7 @@ describe("duplicateNode", () => {
     const src = storedNode({
       id: "n1",
       type: "image",
-      data: { kind: "image", objectKey: "user-a/board-a/img1" },
+      data: { kind: "image", objectKey: "board-a/user-a/img1" },
       width: 400,
       height: 300,
     });
