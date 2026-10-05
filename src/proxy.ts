@@ -15,6 +15,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   // `eve` routes authenticate through the agent's own channel policy.
   matcher: [
-    "/((?!api|eve|login|\\.well-known/workflow|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
+    "/((?!api|eve|login|\\.well-known/workflow|\\.well-known/ucp|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
 };
