@@ -74,16 +74,9 @@ function AuthFormInner({
       className="w-full max-w-sm rounded-lg border bg-background p-6"
     >
       <FieldGroup>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold">
-            {isSignUp ? "Create your account" : "Welcome back"}
-          </h1>
-          <FieldDescription>
-            {isSignUp
-              ? "Sign up to start moodboarding."
-              : "Log in to your boards."}
-          </FieldDescription>
-        </div>
+        <h1 className="text-center font-mono text-lg font-medium uppercase">
+          oat.club
+        </h1>
 
         {isSignUp && (
           <Controller
