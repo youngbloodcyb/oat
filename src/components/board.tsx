@@ -314,7 +314,7 @@ export function Board({
           focusNodeId={focusNodeId}
           canEdit={canEdit}
         />
-        <ChatSidebar />
+        <ChatSidebar boardId={board.id} boardName={board.name} />
       </BoardPermissionsProvider>
     </ReactFlowProvider>
   );

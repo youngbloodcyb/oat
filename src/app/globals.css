@@ -4,6 +4,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@source "../../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -157,6 +158,37 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-node-enter {
+    animation: none;
+  }
+}
+
+/* Agent chat: "Thinking..." label while the model reasons. */
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--foreground) 45%,
+    var(--muted-foreground) 90%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-text 1.8s linear infinite;
+  will-change: background-position;
+}
+
+@keyframes shimmer-text {
+  from {
+    background-position: 120% 0;
+  }
+
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text {
     animation: none;
   }
 }
