@@ -157,18 +157,3 @@ export async function appendBoardChatEvents(input: {
       .where(eq(boardChats.id, chat.id));
   });
 }
-
-/**
- * Deletes the caller's chat and its history. Returns the eve session it was
- * bound to, so the client can retire it.
- */
-export async function clearBoardChat(
-  boardIdInput: string,
-): Promise<string | null> {
-  const { boardId, userId } = await requireChatViewer(boardIdInput);
-  const rows = await db
-    .delete(boardChats)
-    .where(ownChat(boardId, userId))
-    .returning({ sessionId: boardChats.sessionId });
-  return rows[0]?.sessionId ?? null;
-}

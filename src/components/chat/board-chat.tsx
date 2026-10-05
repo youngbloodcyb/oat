@@ -34,22 +34,16 @@ type LoadState =
   | { status: "error" }
   | { status: "ready"; chat: SavedBoardChat | null };
 
-/**
- * Loads the caller's saved chat for this board, then hands it to the live
- * session. `version` changes when the chat is cleared, remounting the session.
- */
+/** Loads the caller's saved chat for this board, then hands it to the live session. */
 export function BoardChat({
   boardId,
   boardName,
-  version,
 }: {
   boardId: string;
   boardName: string;
-  version: number;
 }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `version` forces a reload after clearing.
   useEffect(() => {
     let cancelled = false;
     setState({ status: "loading" });
@@ -60,7 +54,7 @@ export function BoardChat({
     return () => {
       cancelled = true;
     };
-  }, [boardId, version]);
+  }, [boardId]);
 
   if (state.status === "loading") {
     return (
@@ -83,7 +77,6 @@ export function BoardChat({
     <BoardChatSession
       boardId={boardId}
       boardName={boardName}
-      key={version}
       saved={state.chat}
     />
   );

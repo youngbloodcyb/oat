@@ -12,7 +12,6 @@ vi.mock("@/db", () => ({
   db: {
     select: vi.fn(),
     insert: vi.fn(),
-    delete: vi.fn(),
     transaction: vi.fn(),
   },
 }));
@@ -24,7 +23,6 @@ import { requireUser } from "@/lib/auth-server";
 import { requireBoardAccess } from "@/services/board-access";
 import {
   appendBoardChatEvents,
-  clearBoardChat,
   getBoardChat,
   saveBoardChatSession,
 } from "./board-chats";
@@ -45,7 +43,6 @@ function chainable(value: unknown) {
     "values",
     "set",
     "onConflictDoUpdate",
-    "returning",
   ]) {
     promise[method] = vi.fn().mockReturnValue(promise);
   }
@@ -246,17 +243,5 @@ describe("appendBoardChatEvents", () => {
       }),
     ).rejects.toThrow("too large");
     expect(db.transaction).not.toHaveBeenCalled();
-  });
-});
-
-describe("clearBoardChat", () => {
-  it("deletes the caller's chat and returns its session", async () => {
-    db.delete.mockReturnValue(chainable([{ sessionId: "wrun_a" }]));
-    await expect(clearBoardChat(board.id)).resolves.toBe("wrun_a");
-  });
-
-  it("returns null when there was nothing to clear", async () => {
-    db.delete.mockReturnValue(chainable([]));
-    await expect(clearBoardChat(board.id)).resolves.toBeNull();
   });
 });

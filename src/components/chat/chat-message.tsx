@@ -229,20 +229,38 @@ function ToolGroup({
   const needsInput = parts.some(needsInputResponse);
   const [open, setOpen] = useState(needsInput);
   const status = settle(groupStatus(parts), isSettled && !needsInput);
+  // Only expandable when there's something to show beyond the summary.
+  const canExpand =
+    parts.length > 1 ||
+    parts.some((part) => part.toolMetadata?.eve?.inputRequest);
 
   useEffect(() => {
     if (needsInput) setOpen(true);
   }, [needsInput]);
 
+  const summary = (
+    <>
+      <ToolStatusIcon status={status} />
+      <span className="truncate">
+        {parts.length === 1
+          ? describeTool(parts[0], status)
+          : `Used ${parts.length} board tools`}
+      </span>
+    </>
+  );
+
+  if (!canExpand) {
+    return (
+      <p className="my-1.5 flex max-w-full items-center gap-1.5 text-xs leading-6 text-muted-foreground">
+        {summary}
+      </p>
+    );
+  }
+
   return (
     <Collapsible className="my-1.5" onOpenChange={setOpen} open={open}>
       <CollapsibleTrigger className="group flex max-w-full items-center gap-1.5 text-left text-xs leading-6 text-muted-foreground transition-colors hover:text-foreground">
-        <ToolStatusIcon status={status} />
-        <span className="truncate">
-          {parts.length === 1
-            ? describeTool(parts[0], status)
-            : `Used ${parts.length} board tools`}
-        </span>
+        {summary}
         <CaretRightIcon
           className={cn(
             "size-3 shrink-0 transition-all",
@@ -288,13 +306,6 @@ function ToolDetails({
         </p>
       )}
       <InputRequest canRespond={canRespond} onRespond={onRespond} part={part} />
-      <ToolPayload label="input" value={part.input} />
-      {part.state === "output-available" && (
-        <ToolPayload label="result" value={part.output} />
-      )}
-      {part.state === "output-error" && (
-        <ToolPayload destructive label="error" value={part.errorText} />
-      )}
     </div>
   );
 }
@@ -307,31 +318,6 @@ function ToolStatusIcon({ status }: { status: ToolStatus }) {
     return <XIcon className="size-3 shrink-0 text-destructive" />;
   }
   return <CheckIcon className="size-3 shrink-0 text-emerald-500" />;
-}
-
-function ToolPayload({
-  destructive = false,
-  label,
-  value,
-}: {
-  destructive?: boolean;
-  label: string;
-  value: unknown;
-}) {
-  if (value === undefined) return null;
-  return (
-    <div className="space-y-1">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <pre
-        className={cn(
-          "max-h-48 overflow-auto rounded-md bg-muted/40 p-2 font-mono text-[11px] leading-5 whitespace-pre-wrap text-muted-foreground",
-          destructive && "bg-destructive/10 text-destructive",
-        )}
-      >
-        {formatPayload(value)}
-      </pre>
-    </div>
-  );
 }
 
 function InputRequest({
@@ -472,10 +458,4 @@ function truncate(text: string, max: number) {
   return normalized.length <= max
     ? normalized
     : `${normalized.slice(0, max - 1)}…`;
-}
-
-function formatPayload(value: unknown): string {
-  const text =
-    typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "");
-  return text.length > 4000 ? `${text.slice(0, 4000)}\n…` : text;
 }
