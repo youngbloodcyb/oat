@@ -4,13 +4,20 @@ import {
   type BoardCleanup,
   workflowCleanUpBoard,
 } from "@workflows/board-cleanup";
-import { and, desc, eq, isNotNull, or } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lte, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { start } from "workflow/api";
 import { db } from "@/db";
 import { boardChats, boardShares, boards, nodes } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
 import { nodeObjectKey } from "@/lib/blob";
+import {
+  type BoardPreviewNode,
+  type BoardPreviewRow,
+  PREVIEW_NODE_LIMIT,
+  PREVIEW_TEXT_LENGTH,
+  toPreviewNode,
+} from "@/lib/board-preview";
 import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { type BoardAccessRole, findBoardAccess } from "@/services/board-access";
 
@@ -45,6 +52,63 @@ export async function listBoards(): Promise<AccessibleBoard[]> {
     accessRole:
       row.ownerId === user.id ? "owner" : (row.sharedRole as BoardAccessRole),
   }));
+}
+
+/**
+ * Thumbnail nodes for every board the user can see, keyed by board id. Loads
+ * only the topmost nodes of each board and leaves out heavy node data.
+ */
+export async function listBoardPreviews(): Promise<
+  Map<string, BoardPreviewNode[]>
+> {
+  const user = await requireUser();
+  const ranked = db
+    .select({
+      id: nodes.id,
+      boardId: nodes.boardId,
+      type: nodes.type,
+      positionX: nodes.positionX,
+      positionY: nodes.positionY,
+      width: nodes.width,
+      height: nodes.height,
+      zIndex: nodes.zIndex,
+      createdAt: nodes.createdAt,
+      data: sql<
+        BoardPreviewRow["data"]
+      >`${nodes.data} - 'markdown' - 'text'`.as("data"),
+      text: sql<
+        string | null
+      >`left(${nodes.data} ->> 'text', ${PREVIEW_TEXT_LENGTH})`.as("text"),
+      rank: sql<number>`row_number() over (partition by ${nodes.boardId} order by ${nodes.zIndex} desc nulls last, ${nodes.createdAt} desc)`.as(
+        "rank",
+      ),
+    })
+    .from(nodes)
+    .innerJoin(boards, eq(boards.id, nodes.boardId))
+    .leftJoin(
+      boardShares,
+      and(eq(boardShares.boardId, boards.id), eq(boardShares.userId, user.id)),
+    )
+    .where(or(eq(boards.userId, user.id), isNotNull(boardShares.userId)))
+    .as("ranked");
+
+  // Painted in this order, so later rows draw on top.
+  const rows = await db
+    .select()
+    .from(ranked)
+    .where(lte(ranked.rank, PREVIEW_NODE_LIMIT))
+    .orderBy(
+      sql`${ranked.zIndex} asc nulls first`,
+      sql`${ranked.createdAt} asc`,
+    );
+
+  const previews = new Map<string, BoardPreviewNode[]>();
+  for (const row of rows) {
+    const list = previews.get(row.boardId) ?? [];
+    list.push(toPreviewNode(row));
+    previews.set(row.boardId, list);
+  }
+  return previews;
 }
 
 export type BoardDetail = AccessibleBoard & { isShared: boolean };

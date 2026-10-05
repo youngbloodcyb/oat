@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { BoardCardMenu } from "@/components/board-card-menu";
+import { BoardPreview } from "@/components/board-preview";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listBoards } from "@/services/boards";
+import { listBoardPreviews, listBoards } from "@/services/boards";
 
 const gridClassName = "grid grid-cols-2 gap-4 sm:grid-cols-3";
 const cardClassName =
-  "flex aspect-[4/3] flex-col justify-end rounded-lg border bg-card p-4";
+  "flex aspect-[4/3] flex-col overflow-hidden rounded-lg border bg-card p-4";
+
+// Bleeds through the card's p-4 to fill the area above the separator.
+const previewClassName = "-mx-4 -mt-4 min-h-0 flex-1 p-3";
 
 // A fixed locale keeps server and client renders identical.
 const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "long" });
@@ -15,7 +19,10 @@ const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "long" });
 const separatorClassName = "-mx-4 data-horizontal:w-[calc(100%+2rem)]";
 
 export async function BoardsGrid() {
-  const boards = await listBoards();
+  const [boards, previews] = await Promise.all([
+    listBoards(),
+    listBoardPreviews(),
+  ]);
 
   if (boards.length === 0) {
     return (
@@ -33,6 +40,9 @@ export async function BoardsGrid() {
             href={`/${b.id}`}
             className={`${cardClassName} transition-colors hover:bg-muted`}
           >
+            <div className={previewClassName}>
+              <BoardPreview nodes={previews.get(b.id) ?? []} />
+            </div>
             <Separator className={`${separatorClassName} mb-3`} />
             <div className="truncate text-sm font-medium">{b.name}</div>
             {/* Right padding leaves room for the options button. */}
@@ -66,6 +76,7 @@ export function BoardsGridSkeleton() {
         // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
         <li key={i}>
           <div className={`${cardClassName} gap-2`}>
+            <div className={previewClassName} />
             <Separator className={`${separatorClassName} mb-1`} />
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-3 w-1/3" />
