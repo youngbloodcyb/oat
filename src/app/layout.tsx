@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "oat.club",
+  title: "OAT.CLUB",
   description: "moodboarding app",
 };
 
