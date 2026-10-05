@@ -1,5 +1,6 @@
 "use client";
 
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
   Background,
   type NodeChange,
@@ -22,7 +23,6 @@ import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
 import { BoardTitle } from "@/components/board-title";
 import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
-import { DockMenu } from "@/components/dock-menu";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
@@ -211,6 +211,7 @@ function BoardCanvas({
       <Topbar
         board={board}
         shares={shares}
+        onSearch={() => setCommandOpen(true)}
         presence={
           board.isShared && (
             <RealtimePresence
@@ -229,7 +230,6 @@ function BoardCanvas({
         onOpenChange={setCommandOpen}
         onSelectNode={onSelectSearchResult}
       />
-      <DockMenu onSearch={() => setCommandOpen(true)} />
     </SidebarInset>
   );
 }
@@ -238,10 +238,13 @@ function Topbar({
   board,
   shares,
   presence,
+  onSearch,
 }: {
   board: BoardDetail;
   shares: BoardShareMember[];
   presence?: ReactNode;
+  /** Opens board search; the button stays disabled until the board is ready. */
+  onSearch?: () => void;
 }) {
   return (
     <AppTopbar
@@ -272,6 +275,15 @@ function Topbar({
               members={shares}
             />
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSearch}
+            disabled={!onSearch}
+          >
+            <MagnifyingGlassIcon />
+            Search
+          </Button>
           <ChatSidebarTrigger />
           <SignOutButton />
         </>
