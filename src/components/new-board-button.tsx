@@ -20,7 +20,7 @@ export function NewBoardButton() {
   };
 
   return (
-    <Button onClick={onCreate} disabled={creating}>
+    <Button size="sm" onClick={onCreate} disabled={creating}>
       New board
     </Button>
   );
