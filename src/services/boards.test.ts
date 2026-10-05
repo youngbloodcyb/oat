@@ -17,6 +17,10 @@ vi.mock("@/lib/realtime-redis", () => ({
   publishDurableBoardEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 vi.mock("@/services/board-access", () => ({
   findBoardAccess: vi.fn(),
 }));
@@ -30,6 +34,7 @@ vi.mock("@/db", () => ({
   },
 }));
 
+import { revalidatePath } from "next/cache";
 import { db as _db } from "@/db";
 import { requireUser } from "@/lib/auth-server";
 import { deleteBlob } from "@/lib/blob";
@@ -248,6 +253,7 @@ describe("deleteBoard", () => {
 
     expect(mockDeleteBlob).toHaveBeenCalledTimes(1);
     expect(mockDeleteBlob.mock.calls[0][0]).toBe("user-a/board-a/img1");
+    expect(revalidatePath).toHaveBeenCalledWith("/");
   });
 
   it("throws when the board is not found or not owned (no blob cleanup)", async () => {
@@ -256,6 +262,7 @@ describe("deleteBoard", () => {
 
     await expect(deleteBoard("board-b")).rejects.toThrow("Board not found");
     expect(mockDeleteBlob).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("skips blob cleanup for nodes without object keys", async () => {

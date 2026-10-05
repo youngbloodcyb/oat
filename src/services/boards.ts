@@ -1,6 +1,7 @@
 "use server";
 
 import { and, desc, eq, isNotNull, or } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { boardShares, boards, nodes } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
@@ -104,6 +105,7 @@ export async function deleteBoard(boardId: string): Promise<void> {
     .filter((k): k is string => !!k);
   const result = await db.delete(boards).where(owned);
   if (result.rowCount === 0) throw new Error("Board not found");
+  revalidatePath("/");
   await publishDurableBoardEvent({
     type: "board.deleted",
     boardId,
