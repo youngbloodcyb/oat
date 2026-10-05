@@ -45,15 +45,18 @@ import { type CanvasNode, useBoardStore } from "@/lib/store";
 import type { SavedBoardChat } from "@/services/board-chats";
 import type { BoardDetail } from "@/services/boards";
 import type { NodeSearchResult } from "@/services/search";
+import type { BoardShareMember } from "@/services/shares";
 
 const proOptions = { hideAttribution: true };
 
 function BoardCanvas({
   board,
+  shares,
   focusNodeId,
   canEdit,
 }: {
   board: BoardDetail;
+  shares: BoardShareMember[];
   focusNodeId?: string;
   canEdit: boolean;
 }) {
@@ -159,7 +162,7 @@ function BoardCanvas({
   if (!ready) {
     return (
       <>
-        <Topbar board={board} />
+        <Topbar board={board} shares={shares} />
         <Loading />
       </>
     );
@@ -207,6 +210,7 @@ function BoardCanvas({
       <RealtimeCursors cursors={realtime.cursors} />
       <Topbar
         board={board}
+        shares={shares}
         presence={
           board.isShared && (
             <RealtimePresence
@@ -232,9 +236,11 @@ function BoardCanvas({
 
 function Topbar({
   board,
+  shares,
   presence,
 }: {
   board: BoardDetail;
+  shares: BoardShareMember[];
   presence?: ReactNode;
 }) {
   return (
@@ -260,7 +266,11 @@ function Topbar({
             <div className="flex items-center gap-1.5">{presence}</div>
           )}
           {board.accessRole === "owner" && (
-            <SharingDialog boardId={board.id} boardName={board.name} />
+            <SharingDialog
+              boardId={board.id}
+              boardName={board.name}
+              members={shares}
+            />
           )}
           <ChatSidebarTrigger />
           <SignOutButton />
@@ -302,10 +312,13 @@ export function BoardNotFound() {
 export function Board({
   board,
   chat,
+  shares,
   focusNodeId,
 }: {
   board: BoardDetail;
   chat: SavedBoardChat | null;
+  /** The board's share list; empty unless the caller owns the board. */
+  shares: BoardShareMember[];
   focusNodeId?: string;
 }) {
   const canEdit = board.accessRole !== "viewer";
@@ -314,6 +327,7 @@ export function Board({
       <BoardPermissionsProvider canEdit={canEdit}>
         <BoardCanvas
           board={board}
+          shares={shares}
           focusNodeId={focusNodeId}
           canEdit={canEdit}
         />

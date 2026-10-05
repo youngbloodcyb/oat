@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Board, BoardLoading, BoardNotFound } from "@/components/board";
 import { getBoardChat } from "@/services/board-chats";
 import { getBoard } from "@/services/boards";
+import { listBoardShares } from "@/services/shares";
 
 export const instant = true;
 
@@ -31,17 +32,25 @@ async function BoardLoader({
   searchParams: SearchParams;
 }) {
   const [{ id }, { node }] = await Promise.all([params, searchParams]);
-  // Fetch the chat alongside the board; it rejects when the board isn't
-  // accessible, which only matters once we know the board exists.
+  // Fetch the chat and share list alongside the board. Both reject when the
+  // caller lacks access (shares are owner-only), which only matters once we
+  // know the board exists and what role the caller has.
   const chatPromise = getBoardChat(id);
+  const sharesPromise = listBoardShares(id);
   chatPromise.catch(() => {});
+  sharesPromise.catch(() => {});
   const board = await getBoard(id);
 
   if (!board) return <BoardNotFound />;
+  const [chat, shares] = await Promise.all([
+    chatPromise,
+    board.accessRole === "owner" ? sharesPromise : [],
+  ]);
   return (
     <Board
       board={board}
-      chat={await chatPromise}
+      chat={chat}
+      shares={shares}
       focusNodeId={typeof node === "string" ? node : undefined}
     />
   );
