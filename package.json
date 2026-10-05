@@ -40,6 +40,7 @@
     "@vercel/blob": "^2.6.1",
     "@vercel/connect": "2.2.0",
     "@vercel/functions": "^3.7.6",
+    "@vercel/oidc": "^4.0.0",
     "@vercel/oidc-aws-credentials-provider": "^3.3.1",
     "@xyflow/react": "^12.10.2",
     "ai": "^7.0.105",

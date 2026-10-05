@@ -1,11 +1,16 @@
 "use server";
 
+import {
+  type BoardCleanup,
+  workflowCleanUpBoard,
+} from "@workflows/board-cleanup";
 import { and, desc, eq, isNotNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { start } from "workflow/api";
 import { db } from "@/db";
-import { boardShares, boards, nodes } from "@/db/schema";
+import { boardChats, boardShares, boards, nodes } from "@/db/schema";
 import { requireUser } from "@/lib/auth-server";
-import { deleteBlob, nodeObjectKey } from "@/lib/blob";
+import { nodeObjectKey } from "@/lib/blob";
 import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { type BoardAccessRole, findBoardAccess } from "@/services/board-access";
 
@@ -95,21 +100,55 @@ export async function updateBoard(
 
 export async function deleteBoard(boardId: string): Promise<void> {
   const user = await requireUser();
-  const owned = and(eq(boards.id, boardId), eq(boards.userId, user.id));
-  const rows = await db
-    .select({ data: nodes.data })
-    .from(nodes)
-    .where(eq(nodes.boardId, boardId));
-  const keys = rows
-    .map((r) => nodeObjectKey(r.data as { kind: string; objectKey?: string }))
-    .filter((k): k is string => !!k);
-  const result = await db.delete(boards).where(owned);
-  if (result.rowCount === 0) throw new Error("Board not found");
+  const cleanup: BoardCleanup = await db.transaction(async (tx) => {
+    // Locking the row makes concurrent node and chat inserts (which check
+    // the board foreign key) wait, then fail once it's gone, so nothing can
+    // be added between collecting what to clean up and deleting.
+    const owned = await tx
+      .select({ id: boards.id })
+      .from(boards)
+      .where(and(eq(boards.id, boardId), eq(boards.userId, user.id)))
+      .for("update")
+      .limit(1);
+    if (owned.length === 0) throw new Error("Board not found");
+
+    const [nodeRows, chatRows] = await Promise.all([
+      tx
+        .select({ data: nodes.data })
+        .from(nodes)
+        .where(eq(nodes.boardId, boardId)),
+      tx
+        .select({ sessionId: boardChats.sessionId })
+        .from(boardChats)
+        .where(eq(boardChats.boardId, boardId)),
+    ]);
+    // Cascades to nodes, embeddings, shares, and chats.
+    await tx.delete(boards).where(eq(boards.id, boardId));
+
+    return {
+      boardId,
+      objectKeys: nodeRows
+        .map((row) => nodeObjectKey(row.data))
+        .filter((key): key is string => !!key),
+      sessionIds: chatRows
+        .map((row) => row.sessionId)
+        .filter((id): id is string => !!id),
+    };
+  });
+
   revalidatePath("/");
   await publishDurableBoardEvent({
     type: "board.deleted",
     boardId,
     actorUserId: user.id,
   });
-  await Promise.all(keys.map(deleteBlob));
+  try {
+    await start(workflowCleanUpBoard, [cleanup]);
+  } catch (error) {
+    // The board is already gone; don't report the delete as failed.
+    console.error("board cleanup workflow failed to start", {
+      boardId,
+      error,
+    });
+  }
 }

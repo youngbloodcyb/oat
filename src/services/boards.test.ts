@@ -21,6 +21,14 @@ vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("workflow/api", () => ({
+  start: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@workflows/board-cleanup", () => ({
+  workflowCleanUpBoard: vi.fn(),
+}));
+
 vi.mock("@/services/board-access", () => ({
   findBoardAccess: vi.fn(),
 }));
@@ -31,13 +39,15 @@ vi.mock("@/db", () => ({
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    transaction: vi.fn(),
   },
 }));
 
+import { workflowCleanUpBoard } from "@workflows/board-cleanup";
 import { revalidatePath } from "next/cache";
+import { start } from "workflow/api";
 import { db as _db } from "@/db";
 import { requireUser } from "@/lib/auth-server";
-import { deleteBlob } from "@/lib/blob";
 import { findBoardAccess } from "@/services/board-access";
 import {
   createBoard,
@@ -49,7 +59,7 @@ import {
 
 const db = _db as any;
 const mockRequireUser = vi.mocked(requireUser);
-const mockDeleteBlob = vi.mocked(deleteBlob);
+const mockStart = vi.mocked(start);
 const mockFindBoardAccess = vi.mocked(findBoardAccess);
 
 function chainable(value: unknown) {
@@ -59,6 +69,7 @@ function chainable(value: unknown) {
   p.where = vi.fn().mockReturnThis();
   p.orderBy = vi.fn().mockReturnThis();
   p.limit = vi.fn().mockReturnThis();
+  p.for = vi.fn().mockReturnThis();
   p.values = vi.fn().mockReturnThis();
   p.set = vi.fn().mockReturnThis();
   return p;
@@ -240,46 +251,70 @@ describe("updateBoard", () => {
 });
 
 describe("deleteBoard", () => {
-  it("deletes an owned board and cleans up blob files for image/pdf nodes", async () => {
-    db.select.mockReturnValue(
-      chainable([
-        { data: { kind: "image", objectKey: "user-a/board-a/img1" } },
-        { data: { kind: "text", text: "hello" } },
-      ]),
+  /** Runs the transaction against a mock `tx` returning these rows. */
+  function mockTransaction({
+    owned = true,
+    nodeRows = [] as unknown[],
+    chatRows = [] as unknown[],
+  } = {}) {
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(chainable(owned ? [{ id: BOARD_A.id }] : []))
+        .mockReturnValueOnce(chainable(nodeRows))
+        .mockReturnValueOnce(chainable(chatRows)),
+      delete: vi.fn().mockReturnValue(chainable(undefined)),
+    };
+    db.transaction.mockImplementation((fn: (t: typeof tx) => unknown) =>
+      fn(tx),
     );
-    db.delete.mockReturnValue(chainable({ rowCount: 1 }));
+    return tx;
+  }
+
+  it("locks the board, deletes it, and hands its files and chats to cleanup", async () => {
+    const tx = mockTransaction({
+      nodeRows: [
+        { data: { kind: "image", objectKey: "board-a/user-a/img1" } },
+        { data: { kind: "pdf", objectKey: "user-b/board-a/legacy.pdf" } },
+        { data: { kind: "text", text: "hello" } },
+      ],
+      chatRows: [{ sessionId: "wrun_a" }, { sessionId: null }],
+    });
 
     await deleteBoard("board-a");
 
-    expect(mockDeleteBlob).toHaveBeenCalledTimes(1);
-    expect(mockDeleteBlob.mock.calls[0][0]).toBe("user-a/board-a/img1");
+    expect(tx.select.mock.results[0].value.for).toHaveBeenCalledWith("update");
+    expect(tx.delete).toHaveBeenCalledOnce();
     expect(revalidatePath).toHaveBeenCalledWith("/");
+    expect(mockStart).toHaveBeenCalledWith(workflowCleanUpBoard, [
+      {
+        boardId: "board-a",
+        objectKeys: ["board-a/user-a/img1", "user-b/board-a/legacy.pdf"],
+        sessionIds: ["wrun_a"],
+      },
+    ]);
   });
 
-  it("throws when the board is not found or not owned (no blob cleanup)", async () => {
-    db.select.mockReturnValue(chainable([]));
-    db.delete.mockReturnValue(chainable({ rowCount: 0 }));
+  it("throws when the board is not found or not owned, without cleanup", async () => {
+    const tx = mockTransaction({ owned: false });
 
     await expect(deleteBoard("board-b")).rejects.toThrow("Board not found");
-    expect(mockDeleteBlob).not.toHaveBeenCalled();
+    expect(tx.delete).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("skips blob cleanup for nodes without object keys", async () => {
-    db.select.mockReturnValue(
-      chainable([
-        { data: { kind: "link", url: "https://example.com" } },
-        { data: { kind: "text", text: "hi" } },
-      ]),
-    );
-    db.delete.mockReturnValue(chainable({ rowCount: 1 }));
+  it("still reports success when cleanup fails to start", async () => {
+    mockTransaction();
+    mockStart.mockRejectedValueOnce(new Error("queue down"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await deleteBoard("board-a");
-    expect(mockDeleteBlob).not.toHaveBeenCalled();
+    await expect(deleteBoard("board-a")).resolves.toBeUndefined();
   });
 
   it("requires an authenticated session", async () => {
     mockRequireUser.mockRejectedValue(new Error("Unauthorized"));
     await expect(deleteBoard("board-a")).rejects.toThrow("Unauthorized");
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 });
