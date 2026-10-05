@@ -1,6 +1,7 @@
 import { applyNodeChanges, type Node, type NodeChange } from "@xyflow/react";
 import { create } from "zustand";
 import type { ClientNode, NodeData } from "@/db/schema";
+import { DEFAULT_STYLE } from "@/lib/node-style";
 
 // The server (drizzle via src/services) is the source of truth. These types
 // match the resolved client view returned by `listNodesByBoard`, where
@@ -45,16 +46,7 @@ export type PendingNodeData = {
 export type PendingNode = Node<PendingNodeData, "pending">;
 export type CanvasNode = BoardNode | PendingNode;
 
-// Default footprint per node kind, applied at creation time.
-export const DEFAULT_STYLE: Record<
-  BoardNodeData["kind"],
-  { width: number; height: number }
-> = {
-  link: { width: 256, height: 280 },
-  text: { width: 220, height: 120 },
-  image: { width: 240, height: 240 },
-  pdf: { width: 320, height: 400 },
-};
+export { DEFAULT_STYLE };
 
 // The single selected node, or null when nothing — or more than one — is
 // selected. The node dock is a single-node inspector, so it stays hidden

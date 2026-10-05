@@ -53,6 +53,7 @@ import {
   createBoard,
   deleteBoard,
   getBoard,
+  listBoardPreviews,
   listBoards,
   updateBoard,
 } from "./boards";
@@ -65,6 +66,7 @@ const mockFindBoardAccess = vi.mocked(findBoardAccess);
 function chainable(value: unknown) {
   const p = Promise.resolve(value) as any;
   p.from = vi.fn().mockReturnThis();
+  p.innerJoin = vi.fn().mockReturnThis();
   p.leftJoin = vi.fn().mockReturnThis();
   p.where = vi.fn().mockReturnThis();
   p.orderBy = vi.fn().mockReturnThis();
@@ -152,6 +154,68 @@ describe("listBoards", () => {
         name: shared.name,
         createdAt: shared.createdAt,
         accessRole: "viewer",
+      },
+    ]);
+  });
+});
+
+describe("listBoardPreviews", () => {
+  // The ranked subquery, which the outer query selects from.
+  function subquery() {
+    const sub = chainable([]);
+    sub.as = vi.fn().mockReturnValue({ rank: {}, zIndex: {}, createdAt: {} });
+    return sub;
+  }
+
+  it("requires an authenticated session", async () => {
+    mockRequireUser.mockRejectedValue(new Error("Unauthorized"));
+    await expect(listBoardPreviews()).rejects.toThrow("Unauthorized");
+  });
+
+  it("groups preview nodes by board, scoped to accessible boards", async () => {
+    const sub = subquery();
+    const rows = [
+      {
+        id: "n1",
+        boardId: "board-a",
+        type: "pdf",
+        positionX: 0,
+        positionY: 0,
+        width: 100,
+        height: 50,
+        data: { kind: "pdf", name: "a.pdf" },
+        text: null,
+      },
+      {
+        id: "n2",
+        boardId: "board-b",
+        type: "text",
+        positionX: 5,
+        positionY: 5,
+        width: null,
+        height: null,
+        data: { kind: "text" },
+        text: "<p>Hi</p>",
+      },
+    ];
+    db.select.mockReturnValueOnce(sub).mockReturnValueOnce(chainable(rows));
+
+    const result = await listBoardPreviews();
+
+    expect(sub.leftJoin).toHaveBeenCalled();
+    expect(sub.where).toHaveBeenCalled();
+    expect([...result.keys()]).toEqual(["board-a", "board-b"]);
+    expect(result.get("board-a")).toEqual([
+      { id: "n1", x: 0, y: 0, width: 100, height: 50, data: { kind: "pdf" } },
+    ]);
+    expect(result.get("board-b")).toEqual([
+      {
+        id: "n2",
+        x: 5,
+        y: 5,
+        width: 220,
+        height: 120,
+        data: { kind: "text", paragraphs: ["Hi"] },
       },
     ]);
   });
