@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { parseMeta } from "@/lib/og-meta";
 import type { OgMeta } from "@/lib/store";
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
@@ -27,69 +28,6 @@ const setCached = (key: string, data: OgMeta) => {
     if (oldest) cache.delete(oldest);
   }
   cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
-};
-
-const decodeEntities = (s: string) =>
-  s
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#x27;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ");
-
-const parseMeta = (html: string, baseUrl: string): OgMeta => {
-  const result: OgMeta = {};
-  const setIfEmpty = (key: keyof OgMeta, value: string) => {
-    if (!result[key]) result[key] = value;
-  };
-
-  for (const m of html.matchAll(/<meta\b[^>]*>/gi)) {
-    const tag = m[0];
-    const prop = tag
-      .match(/(?:property|name)\s*=\s*["']([^"']+)["']/i)?.[1]
-      ?.toLowerCase();
-    const content = tag.match(/content\s*=\s*["']([^"']*)["']/i)?.[1];
-    if (!prop || !content) continue;
-    const decoded = decodeEntities(content).trim();
-    if (!decoded) continue;
-
-    switch (prop) {
-      case "og:title":
-      case "twitter:title":
-        setIfEmpty("title", decoded);
-        break;
-      case "og:description":
-      case "twitter:description":
-      case "description":
-        setIfEmpty("description", decoded);
-        break;
-      case "og:image":
-      case "og:image:url":
-      case "twitter:image":
-        setIfEmpty("image", decoded);
-        break;
-      case "og:site_name":
-        setIfEmpty("siteName", decoded);
-        break;
-    }
-  }
-
-  if (!result.title) {
-    const t = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (t) result.title = decodeEntities(t[1].trim());
-  }
-
-  if (result.image) {
-    try {
-      result.image = new URL(result.image, baseUrl).href;
-    } catch {
-      delete result.image;
-    }
-  }
-
-  return result;
 };
 
 export async function GET(request: NextRequest) {

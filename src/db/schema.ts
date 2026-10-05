@@ -21,6 +21,10 @@ export type OpenGraph = {
   description?: string;
   image?: string;
   siteName?: string;
+  /** Site icon, shown when there is no preview image. */
+  icon?: string;
+  /** The site's `theme-color`, as a hex color. */
+  themeColor?: string;
 };
 
 export type LinkNodeData = {
