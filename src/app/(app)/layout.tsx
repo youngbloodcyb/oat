@@ -1,13 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import type { ReactNode } from "react";
+import { ChatSidebarProvider } from "@/components/chat-sidebar-provider";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  return (
-    <SidebarProvider
-      defaultOpen={false}
-      style={{ "--sidebar-width": "28rem" } as CSSProperties}
-    >
-      {children}
-    </SidebarProvider>
-  );
+  return <ChatSidebarProvider>{children}</ChatSidebarProvider>;
 }
