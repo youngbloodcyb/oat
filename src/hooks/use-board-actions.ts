@@ -6,6 +6,7 @@ import type { NodeData, NodeType } from "@/db/schema";
 import { authClient } from "@/lib/auth-client";
 import { objectKeyFor } from "@/lib/blob";
 import type { NodeDraft } from "@/lib/board-utils";
+import { embedNodeSize, parseEmbed } from "@/lib/embed";
 import { extractPdfMarkdown } from "@/lib/pdf-parser";
 import { getRealtimeClientId } from "@/lib/realtime-client-id";
 import {
@@ -52,6 +53,12 @@ function pendingPreview(draft: NodeDraft): PendingNodePreview {
           }
         : { kind: "pdf", src: draft.url, name: draft.name };
   }
+}
+
+/** Starting size for a draft's node: a link that plays inline fits its player. */
+function draftStyle(draft: NodeDraft): { width: number; height: number } {
+  const embed = draft.kind === "link" ? parseEmbed(draft.url) : null;
+  return embed ? embedNodeSize(embed) : DEFAULT_STYLE[draft.kind];
 }
 
 const isFileDraft = (
@@ -187,7 +194,7 @@ export function useBoardActions(boardId: string) {
           type: draft.kind as NodeType,
           position: beforeCreate.position,
           data,
-          style: DEFAULT_STYLE[draft.kind],
+          style: draftStyle(draft),
           realtimeSourceId: getRealtimeClientId(),
         });
 
@@ -202,7 +209,7 @@ export function useBoardActions(boardId: string) {
             type: draft.kind as NodeType,
             position: finalPosition,
             data: toClientNodeData(data, nodeId),
-            style: DEFAULT_STYLE[draft.kind],
+            style: draftStyle(draft),
           } as BoardNode);
 
         if (promoted && !positionsMatch(finalPosition, beforeCreate.position)) {
@@ -261,7 +268,7 @@ export function useBoardActions(boardId: string) {
             useBoardStore.getState().removePendingNode(pendingId);
           },
         },
-        style: DEFAULT_STYLE[draft.kind],
+        style: draftStyle(draft),
         selectable: false,
         deletable: false,
       };

@@ -1,11 +1,18 @@
 "use client";
 
-import { GlobeIcon } from "@phosphor-icons/react";
+import { GlobeIcon, PlayIcon } from "@phosphor-icons/react";
 import type { NodeProps } from "@xyflow/react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useBoardPermissions } from "@/components/board-permissions";
 import { NodeShell } from "@/components/nodes/node-shell";
 import { useEditNodeData } from "@/hooks/use-edit-node-data";
+import { type Embed, parseEmbed } from "@/lib/embed";
 import type { LinkNode as LinkNodeType, OgMeta } from "@/lib/store";
 
 export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
@@ -28,10 +35,19 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
   }, [canEdit, id, data.url, data.og, editNodeData]);
 
   const { host, path } = splitUrl(data.url);
+  const embed = useMemo(() => parseEmbed(data.url), [data.url]);
 
   return (
-    <NodeShell id={id} selected={selected} minWidth={160} minHeight={120}>
-      {data.og?.image && !imageFailed ? (
+    <NodeShell
+      id={id}
+      selected={selected}
+      minWidth={160}
+      minHeight={120}
+      className={embed ? "flex flex-col" : undefined}
+    >
+      {embed ? (
+        <EmbedPlayer key={embed.src} embed={embed} title={data.og?.title} />
+      ) : data.og?.image && !imageFailed ? (
         <img
           src={data.og.image}
           alt=""
@@ -43,11 +59,13 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
       )}
       <div className="space-y-1 p-3">
         {data.og?.title && (
-          <div className="line-clamp-2 text-sm font-medium">
+          <div
+            className={`${embed ? "line-clamp-1" : "line-clamp-2"} text-sm font-medium`}
+          >
             {data.og.title}
           </div>
         )}
-        {data.og?.description && (
+        {data.og?.description && !embed && (
           <div className="line-clamp-2 text-xs text-muted-foreground">
             {data.og.description}
           </div>
@@ -62,6 +80,51 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
         </a>
       </div>
     </NodeShell>
+  );
+}
+
+/**
+ * A link that plays inline. Shows the poster until play is pressed, then
+ * swaps in the provider's player, so a board full of videos stays light.
+ * Only the play button starts it; the rest of the poster still selects and
+ * drags the node, and the title strip below stays a handle once it's playing.
+ */
+function EmbedPlayer({ embed, title }: { embed: Embed; title?: string }) {
+  const [playing, setPlaying] = useState(false);
+  const [posterFailed, setPosterFailed] = useState(false);
+
+  if (playing) {
+    return (
+      <iframe
+        src={embed.src}
+        title={title ?? "Video player"}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        className="nodrag nowheel min-h-0 w-full flex-1 bg-black"
+      />
+    );
+  }
+
+  return (
+    <div className="relative min-h-0 flex-1 bg-black">
+      {!posterFailed && (
+        <img
+          src={embed.thumbnail}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setPosterFailed(true)}
+        />
+      )}
+      <button
+        type="button"
+        aria-label="Play video"
+        onClick={() => setPlaying(true)}
+        className="nodrag absolute top-1/2 left-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/70 text-white shadow-md transition-colors hover:bg-red-600"
+      >
+        <PlayIcon weight="fill" className="size-5" />
+      </button>
+    </div>
   );
 }
 

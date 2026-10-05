@@ -194,3 +194,13 @@
     animation: none;
   }
 }
+
+/* An embedded player swallows pointer events, so a drag or pan passing over
+   one would stall. Let them through while anything on the board is moving. */
+.react-flow:has(
+    .react-flow__node.dragging,
+    .react-flow__pane.dragging
+  ) .react-flow__node
+  iframe {
+  pointer-events: none;
+}
