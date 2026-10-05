@@ -1,6 +1,5 @@
 "use client";
 
-import { CircleNotchIcon } from "@phosphor-icons/react";
 import type { MessageStreamEvent } from "eve/client";
 import { useEveAgent } from "eve/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,7 +14,6 @@ import { ChatMessage } from "@/components/chat/chat-message";
 import { Button } from "@/components/ui/button";
 import {
   appendBoardChatEvents,
-  getBoardChat,
   type SavedBoardChat,
   saveBoardChatSession,
 } from "@/services/board-chats";
@@ -29,60 +27,8 @@ const SUGGESTIONS = [
   "What's missing from this board?",
 ];
 
-type LoadState =
-  | { status: "loading" }
-  | { status: "error" }
-  | { status: "ready"; chat: SavedBoardChat | null };
-
-/** Loads the caller's saved chat for this board, then hands it to the live session. */
+/** The live agent session, seeded with the chat history loaded on the server. */
 export function BoardChat({
-  boardId,
-  boardName,
-}: {
-  boardId: string;
-  boardName: string;
-}) {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-    setState({ status: "loading" });
-    getBoardChat(boardId).then(
-      (chat) => !cancelled && setState({ status: "ready", chat }),
-      () => !cancelled && setState({ status: "error" }),
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [boardId]);
-
-  if (state.status === "loading") {
-    return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        <CircleNotchIcon className="size-4 animate-spin" />
-        <span className="sr-only">Loading chat</span>
-      </div>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-muted-foreground">
-        Couldn&rsquo;t load this chat. Try reopening the board.
-      </div>
-    );
-  }
-
-  return (
-    <BoardChatSession
-      boardId={boardId}
-      boardName={boardName}
-      saved={state.chat}
-    />
-  );
-}
-
-function BoardChatSession({
   boardId,
   boardName,
   saved,

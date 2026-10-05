@@ -12,13 +12,16 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import type { SavedBoardChat } from "@/services/board-chats";
 
 export function ChatSidebar({
   boardId,
   boardName,
+  chat,
 }: {
   boardId: string;
   boardName: string;
+  chat: SavedBoardChat | null;
 }) {
   const { open, openMobile, isMobile, toggleSidebar } = useSidebar();
   const isOpen = isMobile ? openMobile : open;
@@ -41,7 +44,9 @@ export function ChatSidebar({
       </SidebarHeader>
       <SidebarSeparator className="mx-0 w-full" />
       <SidebarContent className="gap-0 overflow-hidden">
-        {hasOpened && <BoardChat boardId={boardId} boardName={boardName} />}
+        {hasOpened && (
+          <BoardChat boardId={boardId} boardName={boardName} saved={chat} />
+        )}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>

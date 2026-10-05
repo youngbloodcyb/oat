@@ -42,6 +42,7 @@ import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
 import { type CanvasNode, useBoardStore } from "@/lib/store";
+import type { SavedBoardChat } from "@/services/board-chats";
 import type { BoardDetail } from "@/services/boards";
 import type { NodeSearchResult } from "@/services/search";
 
@@ -300,9 +301,11 @@ export function BoardNotFound() {
 
 export function Board({
   board,
+  chat,
   focusNodeId,
 }: {
   board: BoardDetail;
+  chat: SavedBoardChat | null;
   focusNodeId?: string;
 }) {
   const canEdit = board.accessRole !== "viewer";
@@ -314,7 +317,7 @@ export function Board({
           focusNodeId={focusNodeId}
           canEdit={canEdit}
         />
-        <ChatSidebar boardId={board.id} boardName={board.name} />
+        <ChatSidebar boardId={board.id} boardName={board.name} chat={chat} />
       </BoardPermissionsProvider>
     </ReactFlowProvider>
   );
