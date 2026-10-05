@@ -448,6 +448,11 @@ function describeTool(part: EveDynamicToolPart, status: ToolStatus) {
     }
     case "get_node":
       return running ? "Reading an item" : "Read an item";
+    case "web_search": {
+      const query = typeof input.query === "string" ? input.query : "";
+      const verb = running ? "Searching the web" : "Searched the web";
+      return query ? `${verb} for “${truncate(query, 60)}”` : verb;
+    }
     default:
       return `${running ? "Running" : "Ran"} ${name.replace(/[_-]/g, " ")}`;
   }
