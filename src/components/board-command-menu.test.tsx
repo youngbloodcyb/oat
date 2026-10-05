@@ -16,10 +16,12 @@ import {
 } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  searchNodes: vi.fn(),
   searchNodesByBoard: vi.fn(),
 }));
 
 vi.mock("@/services/search", () => ({
+  searchNodes: mocks.searchNodes,
   searchNodesByBoard: mocks.searchNodesByBoard,
 }));
 
@@ -85,10 +87,11 @@ function renderMenu(
   );
 }
 
-function search(value: string) {
-  const input = screen.getByPlaceholderText(
-    "Search nodes or type a command...",
-  );
+function search(
+  value: string,
+  placeholder = "Search nodes or type a command...",
+) {
+  const input = screen.getByPlaceholderText(placeholder);
   fireEvent.change(input, { target: { value } });
   return input;
 }
@@ -153,6 +156,28 @@ describe("BoardCommandMenu", () => {
 
     await waitFor(() => screen.getByText("Anthropic revenue"));
     expect(screen.getByText("No matches on this board.")).toBeTruthy();
+  });
+
+  it("searches every board when no board is given", async () => {
+    mocks.searchNodes.mockResolvedValue([result, otherResult]);
+    const onSelectNode = vi.fn();
+    renderMenu({ boardId: undefined, onSelectNode });
+    search("anthropic", "Search all boards...");
+
+    await waitFor(() => screen.getByText("Anthropic revenue"));
+
+    expect(mocks.searchNodes).toHaveBeenCalledWith({
+      query: "anthropic",
+      limit: 20,
+    });
+    expect(mocks.searchNodesByBoard).not.toHaveBeenCalled();
+    expect(screen.queryByText("On this board")).toBeNull();
+    expect(screen.queryByText("No matches on this board.")).toBeNull();
+    expect(screen.getByTitle("Opens Product")).toBeTruthy();
+    expect(screen.getByTitle("Opens Research")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("Anthropic revenue"));
+    expect(onSelectNode).toHaveBeenCalledWith(otherResult);
   });
 
   it("opens from the standard command-menu shortcut", () => {

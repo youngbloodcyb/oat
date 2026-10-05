@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { AppTopbar } from "@/components/app-topbar";
 import { BoardsGrid, BoardsGridSkeleton } from "@/components/boards-grid";
+import { HomeSearch } from "@/components/home-search";
 import { NewBoardButton } from "@/components/new-board-button";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -15,6 +16,7 @@ export default function BoardsPage() {
         }
         right={
           <>
+            <HomeSearch />
             <NewBoardButton />
             <SignOutButton />
           </>

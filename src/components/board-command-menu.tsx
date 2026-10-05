@@ -26,6 +26,7 @@ import type { NodeType } from "@/db/schema";
 import {
   type BoardSearchResults,
   type NodeSearchResult,
+  searchNodes,
   searchNodesByBoard,
 } from "@/services/search";
 
@@ -48,7 +49,8 @@ export type BoardCommandAction = {
 };
 
 type BoardCommandMenuProps = {
-  boardId: string;
+  /** The board being viewed; omit to search every board equally. */
+  boardId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectNode: (result: NodeSearchResult) => void;
@@ -101,7 +103,12 @@ export function BoardCommandMenu({
     setError(null);
 
     const timeout = window.setTimeout(() => {
-      searchNodesByBoard({ query: normalizedQuery, boardId, limit: 10 })
+      const request = boardId
+        ? searchNodesByBoard({ query: normalizedQuery, boardId, limit: 10 })
+        : searchNodes({ query: normalizedQuery, limit: 20 }).then(
+            (otherBoards) => ({ currentBoard: [], otherBoards }),
+          );
+      request
         .then((nextResults) => {
           if (!cancelled) setResults(nextResults);
         })
@@ -158,14 +165,22 @@ export function BoardCommandMenu({
         if (nextOpen) onOpenChange(true);
         else close();
       }}
-      title="Board commands"
-      description="Search your nodes or choose a board action."
+      title={boardId ? "Board commands" : "Search boards"}
+      description={
+        boardId
+          ? "Search your nodes or choose a board action."
+          : "Search nodes across all your boards."
+      }
     >
       <Command shouldFilter={false} loop>
         <CommandInput
           value={query}
           onValueChange={onQueryChange}
-          placeholder="Search nodes or type a command..."
+          placeholder={
+            boardId
+              ? "Search nodes or type a command..."
+              : "Search all boards..."
+          }
         />
         <CommandList>
           {visibleActions.length > 0 && (
@@ -217,7 +232,7 @@ export function BoardCommandMenu({
             <CommandEmpty>No nodes found.</CommandEmpty>
           )}
 
-          {showNodes && (
+          {showNodes && boardId && (
             <CommandGroup heading="On this board">
               {results.currentBoard.length === 0 ? (
                 <div className="px-2.5 py-2 text-xs text-muted-foreground">
@@ -237,8 +252,8 @@ export function BoardCommandMenu({
 
           {showNodes && results.otherBoards.length > 0 && (
             <>
-              <CommandSeparator />
-              <CommandGroup heading="In other boards">
+              {boardId && <CommandSeparator />}
+              <CommandGroup heading={boardId ? "In other boards" : "Nodes"}>
                 {results.otherBoards.map((result) => (
                   <NodeResultItem
                     key={result.nodeId}
