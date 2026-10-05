@@ -2,7 +2,7 @@
 
 import { CopyIcon, ShareNetworkIcon, TrashIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import {
   addBoardShare,
   type BoardShareMember,
-  listBoardShares,
   removeBoardShare,
   updateBoardShare,
 } from "@/services/shares";
@@ -36,35 +35,24 @@ function messageFrom(error: unknown) {
 export function SharingDialog({
   boardId,
   boardName,
+  members: initialMembers,
   className,
 }: {
   boardId: string;
   boardName: string;
+  /** Loaded with the board; refreshed by each share action's revalidation. */
+  members: BoardShareMember[];
   className?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [members, setMembers] = useState<BoardShareMember[]>([]);
+  const [members, setMembers] = useState(initialMembers);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<BoardShareRole>("editor");
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadMembers = useCallback(async () => {
-    setLoading(true);
-    try {
-      setMembers(await listBoardShares(boardId));
-    } catch (error) {
-      toast.error(messageFrom(error));
-    } finally {
-      setLoading(false);
-    }
-  }, [boardId]);
-
-  const onOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (next) void loadMembers();
-  };
+  // Local edits apply instantly; the server's list replaces them on refresh.
+  useEffect(() => setMembers(initialMembers), [initialMembers]);
 
   const addMember = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -73,7 +61,6 @@ export function SharingDialog({
     try {
       await addBoardShare({ boardId, email, role });
       setEmail("");
-      await loadMembers();
       // Re-fetch the board so a newly shared board turns on realtime.
       router.refresh();
       toast.success("Board shared");
@@ -119,7 +106,7 @@ export function SharingDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className={cn(className)}>
           <ShareNetworkIcon />
@@ -159,9 +146,7 @@ export function SharingDialog({
 
         <div className="space-y-2">
           <div className="text-xs font-medium">People with access</div>
-          {loading ? (
-            <div className="py-3 text-muted-foreground">Loading…</div>
-          ) : members.length === 0 ? (
+          {members.length === 0 ? (
             <div className="rounded-md border border-dashed p-3 text-muted-foreground">
               Only you have access.
             </div>

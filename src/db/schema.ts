@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
+import type { MessageStreamEvent } from "eve/client";
 
 export type OpenGraph = {
   title?: string;
@@ -309,6 +310,55 @@ export const embeddings = pgTable(
   ],
 );
 
+// One private agent chat per user per board.
+export const boardChats = pgTable(
+  "board_chats",
+  {
+    id: text("id").primaryKey(),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => boards.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // The durable eve session; null until the first message creates it.
+    sessionId: text("session_id"),
+    // eve's remote stream cursor. Tracked separately from the event count:
+    // the two are not guaranteed to match.
+    streamIndex: integer("stream_index").notNull().default(0),
+    eventCount: integer("event_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("board_chats_boardId_userId_idx").on(t.boardId, t.userId),
+    index("board_chats_userId_idx").on(t.userId),
+  ],
+);
+
+// The chat's eve stream events, in order. Kept so history outlives the eve
+// session's own storage.
+export const boardChatEvents = pgTable(
+  "board_chat_events",
+  {
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => boardChats.id, { onDelete: "cascade" }),
+    eventIndex: integer("event_index").notNull(),
+    event: jsonb("event").notNull().$type<MessageStreamEvent>(),
+  },
+  (t) => [
+    primaryKey({
+      name: "board_chat_events_chatId_eventIndex_pk",
+      columns: [t.chatId, t.eventIndex],
+    }),
+  ],
+);
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -319,3 +369,4 @@ export type BoardShare = typeof boardShares.$inferSelect;
 export type BoardShareRole = BoardShare["role"];
 export type StoredNode = typeof nodes.$inferSelect;
 export type StoredEmbedding = typeof embeddings.$inferSelect;
+export type BoardChat = typeof boardChats.$inferSelect;

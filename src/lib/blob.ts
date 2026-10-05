@@ -1,8 +1,22 @@
 import { copy, del, head } from "@vercel/blob";
 
-/** Build a collision-resistant, owner/board-scoped object key. */
+/**
+ * Every object for a board lives under this prefix, so deleting a board can
+ * sweep it, including uploads that never became nodes. Keys made before
+ * this scheme (`{userId}/{boardId}/…`) are only cleaned up through nodes.
+ */
+export function boardKeyPrefix(boardId: string): string {
+  return `${boardId}/`;
+}
+
+/** The prefix one user's uploads to a board must use. */
+export function uploadKeyPrefix(userId: string, boardId: string): string {
+  return `${boardKeyPrefix(boardId)}${userId}/`;
+}
+
+/** Build a collision-resistant, board/uploader-scoped object key. */
 export function objectKeyFor(userId: string, boardId: string): string {
-  return `${userId}/${boardId}/${crypto.randomUUID()}`;
+  return `${uploadKeyPrefix(userId, boardId)}${crypto.randomUUID()}`;
 }
 
 /** Confirm a blob exists at the given key (upload-completion validation). */

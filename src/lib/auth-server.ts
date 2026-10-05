@@ -1,21 +1,10 @@
 import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies, toNextJsHandler } from "better-auth/next-js";
 import { headers } from "next/headers";
-import { db } from "@/db";
-import { account, jwks, session, user, verification } from "@/db/schema";
+import { authOptions } from "@/lib/auth-options";
 
 export const auth = betterAuth({
-  appName: "My App",
-  baseURL: process.env.SITE_URL,
-  secret: process.env.BETTER_AUTH_SECRET,
-  database: drizzleAdapter(db, {
-    provider: "pg",
-    schema: { user, session, account, verification, jwks },
-  }),
-  emailAndPassword: {
-    enabled: true,
-  },
+  ...authOptions,
   plugins: [nextCookies()],
 });
 

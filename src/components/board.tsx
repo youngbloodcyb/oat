@@ -1,5 +1,6 @@
 "use client";
 
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
   Background,
   type NodeChange,
@@ -22,7 +23,6 @@ import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
 import { BoardTitle } from "@/components/board-title";
 import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
-import { DockMenu } from "@/components/dock-menu";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
@@ -42,17 +42,21 @@ import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
 import { type CanvasNode, useBoardStore } from "@/lib/store";
+import type { SavedBoardChat } from "@/services/board-chats";
 import type { BoardDetail } from "@/services/boards";
 import type { NodeSearchResult } from "@/services/search";
+import type { BoardShareMember } from "@/services/shares";
 
 const proOptions = { hideAttribution: true };
 
 function BoardCanvas({
   board,
+  shares,
   focusNodeId,
   canEdit,
 }: {
   board: BoardDetail;
+  shares: BoardShareMember[];
   focusNodeId?: string;
   canEdit: boolean;
 }) {
@@ -158,7 +162,7 @@ function BoardCanvas({
   if (!ready) {
     return (
       <>
-        <Topbar board={board} />
+        <Topbar board={board} shares={shares} />
         <Loading />
       </>
     );
@@ -206,6 +210,8 @@ function BoardCanvas({
       <RealtimeCursors cursors={realtime.cursors} />
       <Topbar
         board={board}
+        shares={shares}
+        onSearch={() => setCommandOpen(true)}
         presence={
           board.isShared && (
             <RealtimePresence
@@ -224,17 +230,21 @@ function BoardCanvas({
         onOpenChange={setCommandOpen}
         onSelectNode={onSelectSearchResult}
       />
-      <DockMenu onSearch={() => setCommandOpen(true)} />
     </SidebarInset>
   );
 }
 
 function Topbar({
   board,
+  shares,
   presence,
+  onSearch,
 }: {
   board: BoardDetail;
+  shares: BoardShareMember[];
   presence?: ReactNode;
+  /** Opens board search; the button stays disabled until the board is ready. */
+  onSearch?: () => void;
 }) {
   return (
     <AppTopbar
@@ -259,8 +269,21 @@ function Topbar({
             <div className="flex items-center gap-1.5">{presence}</div>
           )}
           {board.accessRole === "owner" && (
-            <SharingDialog boardId={board.id} boardName={board.name} />
+            <SharingDialog
+              boardId={board.id}
+              boardName={board.name}
+              members={shares}
+            />
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSearch}
+            disabled={!onSearch}
+          >
+            <MagnifyingGlassIcon />
+            Search
+          </Button>
           <ChatSidebarTrigger />
           <SignOutButton />
         </>
@@ -300,9 +323,14 @@ export function BoardNotFound() {
 
 export function Board({
   board,
+  chat,
+  shares,
   focusNodeId,
 }: {
   board: BoardDetail;
+  chat: SavedBoardChat | null;
+  /** The board's share list; empty unless the caller owns the board. */
+  shares: BoardShareMember[];
   focusNodeId?: string;
 }) {
   const canEdit = board.accessRole !== "viewer";
@@ -311,10 +339,11 @@ export function Board({
       <BoardPermissionsProvider canEdit={canEdit}>
         <BoardCanvas
           board={board}
+          shares={shares}
           focusNodeId={focusNodeId}
           canEdit={canEdit}
         />
-        <ChatSidebar />
+        <ChatSidebar boardId={board.id} boardName={board.name} chat={chat} />
       </BoardPermissionsProvider>
     </ReactFlowProvider>
   );

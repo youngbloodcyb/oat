@@ -1,6 +1,10 @@
-import { defineConfig } from 'drizzle-kit';
-import { Signer } from '@aws-sdk/rds-signer';
-import { awsCredentialsProvider } from '@vercel/oidc-aws-credentials-provider';
+import { config } from "dotenv";
+import { defineConfig } from "drizzle-kit";
+import { Signer } from "@aws-sdk/rds-signer";
+import { awsCredentialsProvider } from "@vercel/oidc-aws-credentials-provider";
+
+// drizzle-kit doesn't load Next.js env files on its own.
+config({ path: ".env.local", quiet: true });
 
 // `generate`/`up`/`check` never connect to the DB, so skip the RDS IAM token
 // (which needs live AWS credentials) when the AWS env vars aren't present.
@@ -25,13 +29,13 @@ const token = canSign
         clientConfig: { region: process.env.AWS_REGION! },
       }),
     }).getAuthToken()
-  : '';
+  : "";
 
 export default defineConfig({
-  dialect: 'postgresql',
-  schema: './src/db/schema.ts',
-  out: './src/db/drizzle',
+  dialect: "postgresql",
+  schema: "./src/db/schema.ts",
+  out: "./src/db/drizzle",
   dbCredentials: {
-    url: `postgresql://${process.env.PGUSER ?? 'postgres'}:${encodeURIComponent(token)}@${process.env.PGHOST ?? 'localhost'}:${process.env.PGPORT ?? 5432}/${process.env.PGDATABASE ?? 'postgres'}?sslmode=${process.env.PGSSLMODE ?? 'require'}`,
+    url: `postgresql://${process.env.PGUSER ?? "postgres"}:${encodeURIComponent(token)}@${process.env.PGHOST ?? "localhost"}:${process.env.PGPORT ?? 5432}/${process.env.PGDATABASE ?? "postgres"}?sslmode=${process.env.PGSSLMODE ?? "require"}`,
   },
 });

@@ -10,7 +10,7 @@ export default function BoardsPage() {
   return (
     <div className="relative min-h-svh w-full">
       <AppTopbar
-        left={<h1 className="text-sm font-medium">Your boards</h1>}
+        left={<h1 className="text-sm font-medium">oat.club</h1>}
         right={
           <>
             <NewBoardButton />
