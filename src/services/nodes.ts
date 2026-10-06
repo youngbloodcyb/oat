@@ -46,6 +46,7 @@ export async function createNode(input: {
   position: { x: number; y: number };
   data: NodeData;
   style?: { width: number; height: number };
+  zIndex?: number;
   realtimeSourceId?: string;
 }): Promise<string> {
   const user = await requireUser();
@@ -73,6 +74,7 @@ export async function createNode(input: {
     width: input.style?.width,
     height: input.style?.height,
     data: input.data,
+    zIndex: input.zIndex,
     searchText,
     embeddingSource,
   });
@@ -86,6 +88,7 @@ export async function createNode(input: {
       type: input.type,
       position: input.position,
       style: input.style,
+      zIndex: input.zIndex,
       data: toClientNodeData(input.data, id),
     },
   });

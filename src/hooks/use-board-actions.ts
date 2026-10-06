@@ -61,6 +61,13 @@ function draftStyle(draft: NodeDraft): { width: number; height: number } {
   return embed ? embedNodeSize(embed) : DEFAULT_STYLE[draft.kind];
 }
 
+/** A stacking order above every node on the board. */
+function frontZIndex(): number {
+  return (
+    Math.max(0, ...useBoardStore.getState().nodes.map((n) => n.zIndex ?? 0)) + 1
+  );
+}
+
 const isFileDraft = (
   draft: NodeDraft,
 ): draft is Extract<NodeDraft, { file: File }> => "file" in draft;
@@ -189,12 +196,15 @@ export function useBoardActions(boardId: string) {
             .getState()
             .pendingNodes.find((node) => node.id === pendingId) ??
           initialPending;
+        // New nodes go on top of everything already on the board.
+        const zIndex = frontZIndex();
         const nodeId = await createNode({
           boardId,
           type: draft.kind as NodeType,
           position: beforeCreate.position,
           data,
           style: draftStyle(draft),
+          zIndex,
           realtimeSourceId: getRealtimeClientId(),
         });
 
@@ -210,6 +220,7 @@ export function useBoardActions(boardId: string) {
             position: finalPosition,
             data: toClientNodeData(data, nodeId),
             style: draftStyle(draft),
+            zIndex,
           } as BoardNode);
 
         if (promoted && !positionsMatch(finalPosition, beforeCreate.position)) {
@@ -269,6 +280,7 @@ export function useBoardActions(boardId: string) {
           },
         },
         style: draftStyle(draft),
+        zIndex: frontZIndex(),
         selectable: false,
         deletable: false,
       };
@@ -346,11 +358,7 @@ export function useBoardActions(boardId: string) {
   );
 
   const bringToFront = useCallback((node: BoardNode) => {
-    const maxZ = Math.max(
-      0,
-      ...useBoardStore.getState().nodes.map((n) => n.zIndex ?? 0),
-    );
-    const nextZ = maxZ + 1;
+    const nextZ = frontZIndex();
     useBoardStore.setState((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === node.id ? { ...n, zIndex: nextZ } : n,
