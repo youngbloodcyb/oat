@@ -38,11 +38,14 @@ export function ChatMessage({
   canRespond,
   isStreaming,
   message,
+  onAddLink,
   onRespond,
 }: {
   canRespond: boolean;
   isStreaming: boolean;
   message: EveMessage;
+  /** Adds a suggested link to the board; omitted when it can't be edited. */
+  onAddLink?: (url: string) => void;
   onRespond: RespondFn;
 }) {
   const isUser = message.role === "user";
@@ -66,6 +69,7 @@ export function ChatMessage({
         <MessageParts
           canRespond={canRespond}
           isUser={isUser}
+          onAddLink={onAddLink}
           onRespond={onRespond}
           parts={message.parts}
           showCaret={isStreaming && !isUser}
@@ -79,12 +83,14 @@ export function ChatMessage({
 function MessageParts({
   canRespond,
   isUser,
+  onAddLink,
   onRespond,
   parts,
   showCaret,
 }: {
   canRespond: boolean;
   isUser: boolean;
+  onAddLink?: (url: string) => void;
   onRespond: RespondFn;
   parts: readonly EveMessagePart[];
   showCaret: boolean;
@@ -116,7 +122,11 @@ function MessageParts({
       }
       flushTools(true);
       elements.push(
-        <LinkSuggestions key={`links:${part.toolCallId}`} links={links} />,
+        <LinkSuggestions
+          key={`links:${part.toolCallId}`}
+          links={links}
+          onAdd={onAddLink}
+        />,
       );
       return;
     }

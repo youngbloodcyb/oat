@@ -3,7 +3,6 @@
 import { code } from "@streamdown/code";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
-import { InlineAddLinkButton } from "@/components/chat/link-suggestions";
 import { cn } from "@/lib/utils";
 
 const streamdownPlugins = { code };
@@ -62,20 +61,16 @@ const markdownComponents: ChatMarkdownProps["components"] = {
   strong: ({ className, ...props }) => (
     <strong className={cn("font-medium", className)} {...props} />
   ),
-  a: ({ className, href, ...props }) => (
-    <>
-      <a
-        className={cn(
-          "font-medium underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground",
-          className,
-        )}
-        href={href}
-        rel="noreferrer"
-        target="_blank"
-        {...props}
-      />
-      {href && <InlineAddLinkButton url={href} />}
-    </>
+  a: ({ className, ...props }) => (
+    <a
+      className={cn(
+        "font-medium underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground",
+        className,
+      )}
+      rel="noreferrer"
+      target="_blank"
+      {...props}
+    />
   ),
   inlineCode: ({ className, ...props }) => (
     <code
