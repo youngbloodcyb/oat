@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { comments, commentThreads, user as users } from "@/db/schema";
@@ -8,52 +8,24 @@ import { requireUser } from "@/lib/auth-server";
 import {
   type BoardComment,
   type BoardCommentThread,
-  type BoardCommentThreadMeta,
   type CommentAuthor,
   MAX_COMMENT_CHARS,
 } from "@/lib/comments";
 import { realtimePositionSchema } from "@/lib/realtime-protocol";
 import { publishCommentEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess } from "@/services/board-access";
+import {
+  authorColumns,
+  queryCommentThreads,
+  toComment,
+  toThreadMeta,
+} from "@/services/comment-reads";
 
 const idSchema = z.string().min(1).max(200);
 const bodySchema = z.string().trim().min(1).max(MAX_COMMENT_CHARS);
 // The client picks new ids so its optimistic copy and the realtime echo of
 // the saved one share an id and merge.
 const newIdSchema = z.uuid();
-
-const authorColumns = {
-  id: users.id,
-  name: users.name,
-  image: users.image,
-};
-
-function toComment(row: {
-  id: string;
-  threadId: string;
-  body: string;
-  createdAt: Date;
-  author: CommentAuthor;
-}): BoardComment {
-  return { ...row, createdAt: row.createdAt.toISOString() };
-}
-
-function toThreadMeta(row: {
-  id: string;
-  boardId: string;
-  positionX: number;
-  positionY: number;
-  createdAt: Date;
-  author: CommentAuthor;
-}): BoardCommentThreadMeta {
-  return {
-    id: row.id,
-    boardId: row.boardId,
-    position: { x: row.positionX, y: row.positionY },
-    createdAt: row.createdAt.toISOString(),
-    author: row.author,
-  };
-}
 
 /** Loads a thread and checks the caller can at least view its board. */
 async function requireThreadAccess(threadId: string, userId: string) {
@@ -75,49 +47,7 @@ export async function listCommentThreads(
   const boardId = idSchema.parse(boardIdInput);
   await requireBoardAccess(boardId, currentUser.id, "view");
 
-  const threadRows = await db
-    .select({
-      id: commentThreads.id,
-      boardId: commentThreads.boardId,
-      positionX: commentThreads.positionX,
-      positionY: commentThreads.positionY,
-      createdAt: commentThreads.createdAt,
-      author: authorColumns,
-    })
-    .from(commentThreads)
-    .innerJoin(users, eq(users.id, commentThreads.userId))
-    .where(eq(commentThreads.boardId, boardId))
-    .orderBy(asc(commentThreads.createdAt));
-  if (threadRows.length === 0) return [];
-
-  const commentRows = await db
-    .select({
-      id: comments.id,
-      threadId: comments.threadId,
-      body: comments.body,
-      createdAt: comments.createdAt,
-      author: authorColumns,
-    })
-    .from(comments)
-    .innerJoin(users, eq(users.id, comments.userId))
-    .where(
-      inArray(
-        comments.threadId,
-        threadRows.map((thread) => thread.id),
-      ),
-    )
-    .orderBy(asc(comments.createdAt));
-
-  const byThread = new Map<string, BoardComment[]>();
-  for (const row of commentRows) {
-    const list = byThread.get(row.threadId) ?? [];
-    list.push(toComment(row));
-    byThread.set(row.threadId, list);
-  }
-  return threadRows.map((row) => ({
-    ...toThreadMeta(row),
-    comments: byThread.get(row.id) ?? [],
-  }));
+  return queryCommentThreads(boardId);
 }
 
 /** Pins a new comment to the board. Anyone who can view the board may comment. */

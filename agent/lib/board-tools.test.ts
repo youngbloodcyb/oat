@@ -8,12 +8,16 @@ const mocks = vi.hoisted(() => ({
   embedSearchQuery: vi.fn(),
   insertNode: vi.fn(),
   deleteNode: vi.fn(),
+  queryCommentThreads: vi.fn(),
 }));
 
 vi.mock("@/db", () => ({ db: { select: mocks.select } }));
 vi.mock("@/services/board-access", () => ({
   requireBoardAccess: mocks.requireBoardAccess,
   requireNodeAccess: mocks.requireNodeAccess,
+}));
+vi.mock("@/services/comment-reads", () => ({
+  queryCommentThreads: mocks.queryCommentThreads,
 }));
 vi.mock("@/lib/search-query", () => ({ runSearch: mocks.runSearch }));
 vi.mock("@/lib/embedding", () => ({
@@ -31,6 +35,7 @@ import { linkSuggestionsSchema } from "@/lib/link-suggestions";
 import addToBoard from "../tools/add_to_board";
 import getNode from "../tools/get_node";
 import listBoardNodes from "../tools/list_board_nodes";
+import listComments from "../tools/list_comments";
 import removeFromBoard from "../tools/remove_from_board";
 import searchBoard from "../tools/search_board";
 import suggestLinks from "../tools/suggest_links";
@@ -94,6 +99,7 @@ describe.each([
   ["list_board_nodes", listBoardNodes, { boardId: "board-a" }],
   ["search_board", searchBoard, { boardId: "board-a", query: "plans" }],
   ["get_node", getNode, { nodeId: "node-a" }],
+  ["list_comments", listComments, { boardId: "board-a" }],
 ])("%s", (_name, tool, input) => {
   it("requires a signed-in user", async () => {
     await expect(run(tool, input, contextFor(null))).rejects.toThrow(
@@ -117,6 +123,7 @@ describe.each([
     await expect(run(tool, input, userCtx)).rejects.toThrow("Board not found");
     expect(mocks.select).not.toHaveBeenCalled();
     expect(mocks.runSearch).not.toHaveBeenCalled();
+    expect(mocks.queryCommentThreads).not.toHaveBeenCalled();
   });
 });
 
@@ -158,6 +165,67 @@ describe("search_board", () => {
         scope: { boardId: "board-a", mode: "only" },
       }),
     );
+  });
+});
+
+describe("list_comments", () => {
+  it("returns threads with the item each is pinned to", async () => {
+    const author = { id: "user-b", name: "Bea", image: null };
+    mocks.queryCommentThreads.mockResolvedValue([
+      {
+        id: "thread-a",
+        boardId: "board-a",
+        position: { x: 10, y: 10 },
+        createdAt: "2026-01-01T00:00:00.000Z",
+        author,
+        comments: [
+          {
+            id: "comment-a",
+            threadId: "thread-a",
+            body: "Is this current?",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            author,
+          },
+        ],
+      },
+      {
+        id: "thread-b",
+        boardId: "board-a",
+        position: { x: 5_000, y: 5_000 },
+        createdAt: "2026-01-02T00:00:00.000Z",
+        author,
+        comments: [],
+      },
+    ]);
+    mocks.select.mockReturnValue(chainable([storedNode({})]));
+
+    const result = (await run(
+      listComments,
+      { boardId: "board-a" },
+      userCtx,
+    )) as {
+      threads: { id: string; pinnedTo: unknown; comments: unknown[] }[];
+    };
+
+    expect(mocks.requireBoardAccess).toHaveBeenCalledWith(
+      "board-a",
+      "user-a",
+      "view",
+    );
+    expect(mocks.queryCommentThreads).toHaveBeenCalledWith("board-a");
+    expect(result.threads[0]).toEqual({
+      id: "thread-a",
+      position: { x: 10, y: 10 },
+      pinnedTo: { id: "node-a", type: "text", title: "Hello" },
+      comments: [
+        {
+          author: "Bea",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          body: "Is this current?",
+        },
+      ],
+    });
+    expect(result.threads[1].pinnedTo).toBeNull();
   });
 });
 
