@@ -1,6 +1,6 @@
 "use client";
 
-import { ChatCircleIcon, XIcon } from "@phosphor-icons/react";
+import { SparkleIcon, XIcon } from "@phosphor-icons/react";
 import { type CSSProperties, useEffect, useState } from "react";
 import { BoardChat } from "@/components/chat/board-chat";
 import { Button } from "@/components/ui/button";
@@ -64,7 +64,7 @@ export function ChatSidebarTrigger({ disabled }: { disabled?: boolean }) {
       disabled={disabled}
       aria-label="Chat"
     >
-      <ChatCircleIcon />
+      <SparkleIcon />
       <kbd className="ml-1 font-sans text-[0.625rem] tracking-widest text-muted-foreground">
         ⌘B
       </kbd>
