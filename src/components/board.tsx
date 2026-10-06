@@ -1,6 +1,5 @@
 "use client";
 
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
   Background,
   type NodeChange,
@@ -33,6 +32,7 @@ import {
   RealtimeCursors,
   RealtimePresence,
 } from "@/components/realtime-collaboration";
+import { SearchButton } from "@/components/search-button";
 import { SharingDialog } from "@/components/sharing-dialog";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
@@ -280,18 +280,7 @@ function Topbar({
             <div className="flex items-center gap-1.5">{presence}</div>
           )}
           <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSearch}
-              disabled={!onSearch}
-            >
-              <MagnifyingGlassIcon />
-              Search
-              <kbd className="ml-1 font-sans text-[0.625rem] tracking-widest text-muted-foreground">
-                ⌘K
-              </kbd>
-            </Button>
+            <SearchButton onClick={onSearch} />
             {/* Held for while loading: only owners get it, but most boards
                 opened are your own, so this keeps Search from jumping. */}
             {!board ? (

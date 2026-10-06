@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePlusIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ export function NewBoardButton() {
 
   return (
     <Button size="sm" onClick={onCreate} disabled={creating}>
-      New board
+      New
+      <FilePlusIcon data-icon="inline-end" />
     </Button>
   );
 }

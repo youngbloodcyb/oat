@@ -1,10 +1,9 @@
 "use client";
 
-import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import { BoardCommandMenu } from "@/components/board-command-menu";
-import { Button } from "@/components/ui/button";
+import { SearchButton } from "@/components/search-button";
 import type { NodeSearchResult } from "@/services/search";
 
 /** Topbar search for the boards page: finds nodes across every board. */
@@ -23,10 +22,7 @@ export function HomeSearch() {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <MagnifyingGlassIcon />
-        Search
-      </Button>
+      <SearchButton onClick={() => setOpen(true)} />
       <BoardCommandMenu
         open={open}
         onOpenChange={setOpen}
