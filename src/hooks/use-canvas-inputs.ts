@@ -84,5 +84,5 @@ export function useCanvasInputs(boardId: string, enabled = true) {
     [addDraft, enabled, screenToFlowPosition],
   );
 
-  return { onDragOver, onDrop };
+  return { onDragOver, onDrop, viewportCenter };
 }

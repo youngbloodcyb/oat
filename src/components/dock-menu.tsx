@@ -1,7 +1,7 @@
 "use client";
 
 import type { Icon } from "@phosphor-icons/react";
-import { BinocularsIcon, FadersIcon, GearIcon } from "@phosphor-icons/react";
+import { ArticleIcon, FadersIcon, GearIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -24,16 +24,16 @@ const options: DockMenuOption[] = [
 
 export function DockMenu({
   className,
-  onSearch,
+  onAddText,
 }: {
   className?: string;
-  onSearch?: () => void;
+  onAddText?: () => void;
 }) {
   const menuOptions: DockMenuOption[] = [
     {
-      name: "search",
-      icon: BinocularsIcon,
-      onSelect: onSearch,
+      name: "text",
+      icon: ArticleIcon,
+      onSelect: onAddText,
     },
     ...options,
   ];

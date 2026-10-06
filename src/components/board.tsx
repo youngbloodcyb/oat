@@ -69,7 +69,8 @@ function BoardCanvas({
   const { fitView, screenToFlowPosition } = useReactFlow<CanvasNode>();
   const [commandOpen, setCommandOpen] = useState(false);
   const ready = useBoardSync(boardId);
-  const { moveNode, removeNode, resizeNode } = useBoardActions(boardId);
+  const { addDraft, moveNode, removeNode, resizeNode } =
+    useBoardActions(boardId);
   const {
     nodes,
     pendingNodes,
@@ -81,7 +82,10 @@ function BoardCanvas({
       onNodesChange: s.onNodesChange,
     })),
   );
-  const { onDragOver, onDrop } = useCanvasInputs(boardId, canEdit);
+  const { onDragOver, onDrop, viewportCenter } = useCanvasInputs(
+    boardId,
+    canEdit,
+  );
   // Unshared boards have nobody to sync with, so they never open a socket.
   const realtime = useBoardRealtime({
     boardId,
@@ -226,7 +230,13 @@ function BoardCanvas({
           )
         }
       />
-      <DockMenu />
+      <DockMenu
+        onAddText={
+          canEdit
+            ? () => addDraft({ kind: "text", text: "" }, viewportCenter())
+            : undefined
+        }
+      />
       {canEdit && <NodeDock boardId={boardId} />}
       {canEdit && <TextEditorDrawer />}
       {canEdit && <ImageCropDialog boardId={boardId} />}
