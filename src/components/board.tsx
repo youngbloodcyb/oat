@@ -46,6 +46,7 @@ import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
+import { useFocusNode } from "@/hooks/use-focus-node";
 import { useCommentStore } from "@/lib/comment-store";
 import { type CanvasNode, useBoardStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -70,7 +71,7 @@ function BoardCanvas({
   const boardId = board.id;
   const router = useRouter();
   const { resolvedTheme } = useTheme();
-  const { fitView, screenToFlowPosition } = useReactFlow<CanvasNode>();
+  const { screenToFlowPosition } = useReactFlow<CanvasNode>();
   const [commandOpen, setCommandOpen] = useState(false);
   const ready = useBoardSync(boardId);
   const { addDraft, moveNode, removeNode, resizeNode } =
@@ -111,20 +112,7 @@ function BoardCanvas({
     [nodes, pendingNodes],
   );
 
-  const focusNode = useCallback(
-    (nodeId: string) => {
-      if (!useBoardStore.getState().selectNode(nodeId)) return;
-      window.requestAnimationFrame(() => {
-        void fitView({
-          nodes: [{ id: nodeId }],
-          padding: 0.5,
-          maxZoom: 1.25,
-          duration: 350,
-        });
-      });
-    },
-    [fitView],
-  );
+  const focusNode = useFocusNode();
 
   useEffect(() => {
     if (ready && focusNodeId) focusNode(focusNodeId);
