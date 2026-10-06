@@ -15,6 +15,7 @@ import type {
 } from "eve/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { ChatMarkdown } from "@/components/chat/chat-markdown";
+import { LinkSuggestions } from "@/components/chat/link-suggestions";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -22,6 +23,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { linkSuggestionsSchema } from "@/lib/link-suggestions";
 import { cn } from "@/lib/utils";
 
 export type ChatInputResponse = {
@@ -36,11 +38,14 @@ export function ChatMessage({
   canRespond,
   isStreaming,
   message,
+  onAddLink,
   onRespond,
 }: {
   canRespond: boolean;
   isStreaming: boolean;
   message: EveMessage;
+  /** Adds a suggested link to the board; omitted when it can't be edited. */
+  onAddLink?: (url: string) => void;
   onRespond: RespondFn;
 }) {
   const isUser = message.role === "user";
@@ -64,6 +69,7 @@ export function ChatMessage({
         <MessageParts
           canRespond={canRespond}
           isUser={isUser}
+          onAddLink={onAddLink}
           onRespond={onRespond}
           parts={message.parts}
           showCaret={isStreaming && !isUser}
@@ -77,12 +83,14 @@ export function ChatMessage({
 function MessageParts({
   canRespond,
   isUser,
+  onAddLink,
   onRespond,
   parts,
   showCaret,
 }: {
   canRespond: boolean;
   isUser: boolean;
+  onAddLink?: (url: string) => void;
   onRespond: RespondFn;
   parts: readonly EveMessagePart[];
   showCaret: boolean;
@@ -107,7 +115,19 @@ function MessageParts({
 
   parts.forEach((part, index) => {
     if (part.type === "dynamic-tool") {
-      tools.push(part);
+      const links = suggestedLinks(part);
+      if (!links) {
+        tools.push(part);
+        return;
+      }
+      flushTools(true);
+      elements.push(
+        <LinkSuggestions
+          key={`links:${part.toolCallId}`}
+          links={links}
+          onAdd={onAddLink}
+        />,
+      );
       return;
     }
     flushTools(true);
@@ -402,6 +422,15 @@ function InputRequest({
   );
 }
 
+/** The links from a finished `suggest_links` call, rendered as cards. */
+function suggestedLinks(part: EveDynamicToolPart) {
+  const name = part.toolMetadata?.eve?.name ?? part.toolName;
+  if (name !== "suggest_links") return null;
+  if (part.state !== "output-available" || part.partial) return null;
+  const parsed = linkSuggestionsSchema.safeParse(part.output);
+  return parsed.success ? parsed.data.links : null;
+}
+
 function needsInputResponse(part: EveDynamicToolPart) {
   const eve = part.toolMetadata?.eve;
   return Boolean(eve?.inputRequest && !eve.inputResponse);
@@ -448,6 +477,8 @@ function describeTool(part: EveDynamicToolPart, status: ToolStatus) {
     }
     case "get_node":
       return running ? "Reading an item" : "Read an item";
+    case "suggest_links":
+      return running ? "Suggesting links" : "Suggested links";
     case "web_search": {
       const query = typeof input.query === "string" ? input.query : "";
       const verb = running ? "Searching the web" : "Searched the web";

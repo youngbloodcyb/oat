@@ -20,9 +20,11 @@ vi.mock("@/lib/embedding", () => ({
 
 import type { ToolContext } from "eve/tools";
 import type { StoredNode } from "@/db/schema";
+import { linkSuggestionsSchema } from "@/lib/link-suggestions";
 import getNode from "../tools/get_node";
 import listBoardNodes from "../tools/list_board_nodes";
 import searchBoard from "../tools/search_board";
+import suggestLinks from "../tools/suggest_links";
 
 type Executable = {
   execute: (input: never, ctx: ToolContext) => Promise<unknown>;
@@ -181,5 +183,32 @@ describe("get_node", () => {
     )) as { text: string; nextOffset: number | null };
     expect(second.text).toHaveLength(5_000);
     expect(second.nextOffset).toBeNull();
+  });
+});
+
+describe("suggest_links", () => {
+  it("returns the links for the chat to render", async () => {
+    const links = [
+      {
+        url: "https://shop.example.com/products/mug",
+        title: "Stoneware mug",
+        price: "$25.00",
+      },
+    ];
+    await expect(
+      Promise.resolve(run(suggestLinks, { links }, userCtx)),
+    ).resolves.toEqual({
+      shown: 1,
+      links,
+    });
+  });
+
+  it("only accepts http(s) links", () => {
+    const parse = (url: string) =>
+      linkSuggestionsSchema.safeParse({ links: [{ url, title: "Item" }] })
+        .success;
+    expect(parse("https://example.com/item")).toBe(true);
+    expect(parse("javascript:alert(1)")).toBe(false);
+    expect(parse("ftp://example.com/item")).toBe(false);
   });
 });

@@ -1,9 +1,11 @@
 "use client";
 
+import { useReactFlow, useStoreApi } from "@xyflow/react";
 import type { MessageStreamEvent } from "eve/client";
 import { useEveAgent } from "eve/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useBoardPermissions } from "@/components/board-permissions";
 import { ChatComposer } from "@/components/chat/chat-composer";
 import {
   ChatConversation,
@@ -12,6 +14,7 @@ import {
 } from "@/components/chat/chat-conversation";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { Button } from "@/components/ui/button";
+import { useBoardActions } from "@/hooks/use-board-actions";
 import {
   appendBoardChatEvents,
   type SavedBoardChat,
@@ -79,6 +82,9 @@ export function BoardChat({
     enqueueSave(() => saveEvents(boardId, session, events, savedCountRef));
   }, [boardId, enqueueSave, events, session, status]);
 
+  const addLink = useAddLinkToBoard(boardId);
+  const { canEdit } = useBoardPermissions();
+
   const isBusy = status === "submitted" || status === "streaming";
   const isResuming = status === "resuming";
   const messages = agent.data.messages;
@@ -103,6 +109,7 @@ export function BoardChat({
                 isStreaming={isBusy && message === last}
                 key={message.id}
                 message={message}
+                onAddLink={canEdit ? addLink : undefined}
                 onRespond={(responses) => {
                   agent
                     .respond(responses)
@@ -131,6 +138,36 @@ export function BoardChat({
         />
       </div>
     </>
+  );
+}
+
+// Each link added from the chat lands a step down and right of the last, so a
+// handful added in a row fan out instead of stacking exactly.
+const ADD_STAGGER = 24;
+const ADD_STAGGER_STEPS = 6;
+
+/** Adds a link node at the center of the visible canvas. */
+function useAddLinkToBoard(boardId: string) {
+  const { addDraft } = useBoardActions(boardId);
+  const { screenToFlowPosition } = useReactFlow();
+  const flowStore = useStoreApi();
+  const addedRef = useRef(0);
+
+  return useCallback(
+    (url: string) => {
+      // The chat sidebar narrows the canvas, so center on the canvas itself.
+      const rect = flowStore.getState().domNode?.getBoundingClientRect();
+      const center = screenToFlowPosition({
+        x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
+        y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2,
+      });
+      const step = (addedRef.current++ % ADD_STAGGER_STEPS) * ADD_STAGGER;
+      addDraft(
+        { kind: "link", url },
+        { x: center.x + step, y: center.y + step },
+      );
+    },
+    [addDraft, flowStore, screenToFlowPosition],
   );
 }
 
