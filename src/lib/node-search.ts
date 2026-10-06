@@ -1,6 +1,6 @@
 import type { NodeData } from "@/db/schema";
 
-function normalizeText(value: string): string {
+export function normalizeText(value: string): string {
   return value
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")

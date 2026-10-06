@@ -20,6 +20,7 @@ import {
 } from "@/components/chat/board-change-card";
 import { ChatMarkdown } from "@/components/chat/chat-markdown";
 import { LinkSuggestions } from "@/components/chat/link-suggestions";
+import { SelectionChips } from "@/components/chat/selection-chips";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -27,6 +28,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { extractSelection, type SelectionItem } from "@/lib/chat-selection";
 import { linkSuggestionsSchema } from "@/lib/link-suggestions";
 import { cn } from "@/lib/utils";
 
@@ -38,12 +40,35 @@ export type ChatInputResponse = {
 
 type RespondFn = (responses: ChatInputResponse[]) => void;
 
+/**
+ * Pulls the board items attached to a user message out of its text, leaving
+ * just what the person typed.
+ */
+function splitSelection(parts: readonly EveMessagePart[]): {
+  parts: EveMessagePart[];
+  items: SelectionItem[];
+} {
+  const items = new Map<string, SelectionItem>();
+  const rest: EveMessagePart[] = [];
+  for (const part of parts) {
+    if (part.type !== "text") {
+      rest.push(part);
+      continue;
+    }
+    const extracted = extractSelection(part.text);
+    for (const item of extracted.items) items.set(item.id, item);
+    if (extracted.text) rest.push({ ...part, text: extracted.text });
+  }
+  return { parts: rest, items: [...items.values()] };
+}
+
 export function ChatMessage({
   canRespond,
   isStreaming,
   message,
   onAddLink,
   onRespond,
+  onSelectItem,
 }: {
   canRespond: boolean;
   isStreaming: boolean;
@@ -51,17 +76,29 @@ export function ChatMessage({
   /** Adds a suggested link to the board; omitted when it can't be edited. */
   onAddLink?: (url: string) => void;
   onRespond: RespondFn;
+  /** Shows a board item attached to a message. */
+  onSelectItem?: (item: SelectionItem) => void;
 }) {
   const isUser = message.role === "user";
+  const { parts, items } = isUser
+    ? splitSelection(message.parts)
+    : { parts: message.parts, items: [] };
 
   return (
     <article
       className={cn(
         "flex w-full min-w-0",
-        isUser ? "justify-end" : "justify-start",
+        isUser ? "flex-col items-end gap-1" : "justify-start",
         message.metadata?.optimistic && "opacity-80",
       )}
     >
+      {isUser && (
+        <SelectionChips
+          className="max-w-[85%] justify-end"
+          items={items}
+          onSelectItem={onSelectItem}
+        />
+      )}
       <div
         className={cn(
           "min-w-0",
@@ -75,7 +112,7 @@ export function ChatMessage({
           isUser={isUser}
           onAddLink={onAddLink}
           onRespond={onRespond}
-          parts={message.parts}
+          parts={parts}
           showCaret={isStreaming && !isUser}
         />
       </div>

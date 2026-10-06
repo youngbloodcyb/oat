@@ -13,8 +13,16 @@ import {
   ChatScrollButton,
 } from "@/components/chat/chat-conversation";
 import { ChatMessage } from "@/components/chat/chat-message";
+import { ComposerSelection } from "@/components/chat/selection-chips";
 import { Button } from "@/components/ui/button";
 import { useBoardActions } from "@/hooks/use-board-actions";
+import { useFocusNode } from "@/hooks/use-focus-node";
+import {
+  type SelectionItem,
+  selectedItems,
+  selectionBlock,
+} from "@/lib/chat-selection";
+import { useBoardStore } from "@/lib/store";
 import {
   appendBoardChatEvents,
   type SavedBoardChat,
@@ -84,6 +92,15 @@ export function BoardChat({
 
   const addLink = useAddLinkToBoard(boardId);
   const { canEdit } = useBoardPermissions();
+  const focusNode = useFocusNode();
+  const focusItem = useCallback(
+    (item: SelectionItem) => {
+      if (!focusNode(item.id)) {
+        toast(`“${item.title}” is no longer on the board`);
+      }
+    },
+    [focusNode],
+  );
 
   const isBusy = status === "submitted" || status === "streaming";
   const isResuming = status === "resuming";
@@ -91,9 +108,18 @@ export function BoardChat({
   const last = messages.at(-1);
   const showThinking = isBusy && last?.role !== "assistant";
 
+  // Whatever is selected on the board goes along with the message.
   const send = (text: string) => {
     setDraft("");
-    agent.send(text).catch(() => setDraft(text));
+    const items = selectedItems(useBoardStore.getState().nodes);
+    const message =
+      items.length > 0
+        ? [
+            { type: "text" as const, text },
+            { type: "text" as const, text: selectionBlock(items) },
+          ]
+        : text;
+    agent.send(message).catch(() => setDraft(text));
   };
 
   return (
@@ -110,6 +136,7 @@ export function BoardChat({
                 key={message.id}
                 message={message}
                 onAddLink={canEdit ? addLink : undefined}
+                onSelectItem={focusItem}
                 onRespond={(responses) => {
                   agent
                     .respond(responses)
@@ -126,6 +153,7 @@ export function BoardChat({
       </ChatConversation>
       <div className="p-3 pt-0">
         <ChatComposer
+          context={<ComposerSelection />}
           disabled={isResuming}
           isBusy={isBusy}
           onChange={setDraft}

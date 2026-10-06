@@ -4,6 +4,7 @@ import { ArrowUpIcon, StopIcon } from "@phosphor-icons/react";
 import {
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   useEffect,
   useId,
   useRef,
@@ -15,6 +16,7 @@ export const MAX_CHAT_MESSAGE_CHARS = 8_000;
 
 export function ChatComposer({
   className,
+  context,
   disabled = false,
   isBusy = false,
   onChange,
@@ -24,6 +26,8 @@ export function ChatComposer({
   value,
 }: {
   className?: string;
+  /** Shown above the text box, for what will be sent along with the message. */
+  context?: ReactNode;
   disabled?: boolean;
   isBusy?: boolean;
   onChange: (value: string) => void;
@@ -60,6 +64,7 @@ export function ChatComposer({
         submit();
       }}
     >
+      {context}
       <label className="sr-only" htmlFor={composerId}>
         Message the assistant
       </label>
