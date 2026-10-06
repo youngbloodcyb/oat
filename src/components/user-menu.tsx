@@ -35,7 +35,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Account menu"
-        className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-muted text-[11px] font-medium text-muted-foreground uppercase ring-1 ring-foreground/10 transition-colors outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+        className="flex size-6 cursor-pointer items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground uppercase ring-1 ring-foreground/10 transition-colors outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
       >
         {user ? initialsOf(user.name, user.email) : null}
       </DropdownMenuTrigger>

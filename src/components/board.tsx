@@ -302,9 +302,13 @@ function Topbar({
 
 function BackToBoardsButton() {
   return (
-    <Button asChild variant="outline" size="sm">
-      <Link href="/">← Home</Link>
-    </Button>
+    // Same lettering as the home page's topbar title.
+    <Link
+      href="/"
+      className="font-mono text-sm font-medium uppercase transition-colors hover:text-muted-foreground"
+    >
+      oat.club ←
+    </Link>
   );
 }
 
