@@ -1,5 +1,5 @@
-import "server-only";
-
+// Server code only. No `server-only` import: the eve agent runtime loads this
+// too (agent tools publish board changes), and it can't resolve that package.
 import Redis from "ioredis";
 import type {
   RealtimeAccessEventInput,

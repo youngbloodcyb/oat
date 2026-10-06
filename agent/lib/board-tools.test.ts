@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   requireNodeAccess: vi.fn(),
   runSearch: vi.fn(),
   embedSearchQuery: vi.fn(),
+  insertNode: vi.fn(),
 }));
 
 vi.mock("@/db", () => ({ db: { select: mocks.select } }));
@@ -17,10 +18,13 @@ vi.mock("@/lib/search-query", () => ({ runSearch: mocks.runSearch }));
 vi.mock("@/lib/embedding", () => ({
   embedSearchQuery: mocks.embedSearchQuery,
 }));
+vi.mock("@/services/node-writes", () => ({ insertNode: mocks.insertNode }));
 
 import type { ToolContext } from "eve/tools";
 import type { StoredNode } from "@/db/schema";
+import { textToHtml } from "@/lib/board-additions";
 import { linkSuggestionsSchema } from "@/lib/link-suggestions";
+import addToBoard from "../tools/add_to_board";
 import getNode from "../tools/get_node";
 import listBoardNodes from "../tools/list_board_nodes";
 import searchBoard from "../tools/search_board";
@@ -210,5 +214,75 @@ describe("suggest_links", () => {
     expect(parse("https://example.com/item")).toBe(true);
     expect(parse("javascript:alert(1)")).toBe(false);
     expect(parse("ftp://example.com/item")).toBe(false);
+  });
+});
+
+describe("add_to_board", () => {
+  type Policy = (ctx: unknown) => Promise<unknown>;
+  const approve = (addToBoard as unknown as { approval: Policy }).approval;
+  const approvalCtx = (input: unknown) => ({
+    session: userCtx.session,
+    toolInput: input,
+  });
+
+  it("asks the person before adding to a board they can edit", async () => {
+    mocks.requireBoardAccess.mockResolvedValue({ board: { id: "board-a" } });
+    await expect(approve(approvalCtx({ boardId: "board-a" }))).resolves.toBe(
+      "user-approval",
+    );
+    expect(mocks.requireBoardAccess).toHaveBeenCalledWith(
+      "board-a",
+      "user-a",
+      "edit",
+    );
+  });
+
+  it("turns viewers away without an approval card", async () => {
+    mocks.requireBoardAccess.mockRejectedValue(new Error("Forbidden"));
+    await expect(
+      approve(approvalCtx({ boardId: "board-a" })),
+    ).resolves.toMatchObject({ type: "denied" });
+  });
+
+  it("adds links and notes to the right of the existing nodes", async () => {
+    mocks.requireBoardAccess.mockResolvedValue({ board: { id: "board-a" } });
+    mocks.select.mockReturnValue(
+      chainable([
+        { type: "text", x: 0, y: 50, width: 200, height: 100, zIndex: 3 },
+      ]),
+    );
+    mocks.insertNode.mockImplementation(async (input) => ({
+      id: `node-${input.type}`,
+      ...input,
+    }));
+
+    await run(
+      addToBoard,
+      {
+        boardId: "board-a",
+        items: [
+          { type: "link", url: "https://shop.example.com/mug" },
+          { type: "link", url: "https://example.com/guide.pdf" },
+          { type: "text", text: "Pick <one>\n\nby Friday" },
+        ],
+      },
+      userCtx,
+    );
+
+    const calls = mocks.insertNode.mock.calls.map(([input]) => input);
+    expect(calls.map((c) => c.type)).toEqual(["link", "pdf", "text"]);
+    expect(calls[0]).toMatchObject({
+      userId: "user-a",
+      boardId: "board-a",
+      zIndex: 4,
+      position: { x: 280, y: 50 },
+    });
+    expect(calls[2].data.text).toBe("<p>Pick &lt;one&gt;</p><p>by Friday</p>");
+  });
+});
+
+describe("textToHtml", () => {
+  it("keeps single line breaks inside a paragraph", () => {
+    expect(textToHtml("a\nb")).toBe("<p>a<br>b</p>");
   });
 });

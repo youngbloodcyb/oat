@@ -14,6 +14,7 @@ import type {
   EveMessagePart,
 } from "eve/react";
 import { type ReactNode, useEffect, useState } from "react";
+import { BoardAdditionCard } from "@/components/chat/board-addition-card";
 import { ChatMarkdown } from "@/components/chat/chat-markdown";
 import { LinkSuggestions } from "@/components/chat/link-suggestions";
 import { Button } from "@/components/ui/button";
@@ -114,6 +115,19 @@ function MessageParts({
   };
 
   parts.forEach((part, index) => {
+    if (part.type === "dynamic-tool" && toolNameOf(part) === "add_to_board") {
+      flushTools(true);
+      elements.push(
+        <BoardAdditionCard
+          canRespond={canRespond}
+          isSettled={index < parts.length - 1 || !showCaret}
+          key={`add:${part.toolCallId}`}
+          onRespond={onRespond}
+          part={part}
+        />,
+      );
+      return;
+    }
     if (part.type === "dynamic-tool") {
       const links = suggestedLinks(part);
       if (!links) {
@@ -424,11 +438,14 @@ function InputRequest({
 
 /** The links from a finished `suggest_links` call, rendered as cards. */
 function suggestedLinks(part: EveDynamicToolPart) {
-  const name = part.toolMetadata?.eve?.name ?? part.toolName;
-  if (name !== "suggest_links") return null;
+  if (toolNameOf(part) !== "suggest_links") return null;
   if (part.state !== "output-available" || part.partial) return null;
   const parsed = linkSuggestionsSchema.safeParse(part.output);
   return parsed.success ? parsed.data.links : null;
+}
+
+function toolNameOf(part: EveDynamicToolPart) {
+  return part.toolMetadata?.eve?.name ?? part.toolName;
 }
 
 function needsInputResponse(part: EveDynamicToolPart) {
@@ -464,7 +481,7 @@ function settle(status: ToolStatus, isSettled: boolean): ToolStatus {
 
 function describeTool(part: EveDynamicToolPart, status: ToolStatus) {
   const running = status === "running";
-  const name = part.toolMetadata?.eve?.name ?? part.toolName;
+  const name = toolNameOf(part);
   const input = (part.input ?? {}) as Record<string, unknown>;
 
   switch (name) {
