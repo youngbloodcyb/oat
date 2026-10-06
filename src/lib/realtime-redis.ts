@@ -4,6 +4,7 @@ import Redis from "ioredis";
 import type {
   RealtimeAccessEventInput,
   RealtimeBusEvent,
+  RealtimeCommentEventInput,
   RealtimeDurableEvent,
   RealtimeDurableEventInput,
 } from "@/lib/realtime-protocol";
@@ -113,6 +114,15 @@ export async function publishDurableBoardEvent(
 
 export async function publishAccessEvent(
   input: RealtimeAccessEventInput,
+): Promise<void> {
+  await publishRealtimeBusEvent({
+    ...input,
+    eventId: crypto.randomUUID(),
+  });
+}
+
+export async function publishCommentEvent(
+  input: RealtimeCommentEventInput,
 ): Promise<void> {
   await publishRealtimeBusEvent({
     ...input,

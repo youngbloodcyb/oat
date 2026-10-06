@@ -204,3 +204,20 @@
   iframe {
   pointer-events: none;
 }
+
+/* Comment tool: while armed, the board shows a theme-blue chat bubble cursor
+   (Phosphor's ChatCircle, hotspot at its tail) and nodes ignore their own
+   content so a click anywhere pins a comment. */
+/* The extra `.react-flow` outranks React Flow's own grab/grabbing cursors. */
+.comment-placing,
+.comment-placing .react-flow .react-flow__pane,
+.comment-placing .react-flow .react-flow__node {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='-12 -12 280 280'%3E%3Cpath d='M232,128A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Z' fill='%23113264' stroke='white' stroke-width='16' stroke-linejoin='round'/%3E%3C/svg%3E")
+    4 24,
+    crosshair;
+}
+
+.comment-placing .react-flow__node * {
+  pointer-events: none;
+}

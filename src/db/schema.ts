@@ -363,6 +363,45 @@ export const boardChatEvents = pgTable(
   ],
 );
 
+// A comment pinned to a spot on the board. Its first comment is the one that
+// opened it; the rest are replies. Resolving deletes the whole thread.
+export const commentThreads = pgTable(
+  "comment_threads",
+  {
+    id: text("id").primaryKey(),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => boards.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    positionX: doublePrecision("position_x").notNull(),
+    positionY: doublePrecision("position_y").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("comment_threads_boardId_idx").on(t.boardId)],
+);
+
+export const comments = pgTable(
+  "comments",
+  {
+    id: text("id").primaryKey(),
+    threadId: text("thread_id")
+      .notNull()
+      .references(() => commentThreads.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("comments_threadId_createdAt_idx").on(t.threadId, t.createdAt)],
+);
+
 export type User = typeof user.$inferSelect;
 export type Session = typeof session.$inferSelect;
 export type Account = typeof account.$inferSelect;
@@ -374,3 +413,5 @@ export type BoardShareRole = BoardShare["role"];
 export type StoredNode = typeof nodes.$inferSelect;
 export type StoredEmbedding = typeof embeddings.$inferSelect;
 export type BoardChat = typeof boardChats.$inferSelect;
+export type CommentThread = typeof commentThreads.$inferSelect;
+export type Comment = typeof comments.$inferSelect;

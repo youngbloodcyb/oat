@@ -4,7 +4,7 @@ import { useReactFlow, useViewport } from "@xyflow/react";
 import type { RemoteCursor } from "@/hooks/use-board-realtime";
 import type { RealtimePresenceMember } from "@/lib/realtime-protocol";
 
-function initials(name: string): string {
+export function initials(name: string): string {
   return name
     .split(/\s+/)
     .slice(0, 2)
@@ -12,7 +12,7 @@ function initials(name: string): string {
     .join("");
 }
 
-function colorFor(value: string): string {
+export function colorFor(value: string): string {
   let hash = 0;
   for (const character of value) {
     hash = (hash * 31 + character.charCodeAt(0)) | 0;

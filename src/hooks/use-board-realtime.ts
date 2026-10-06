@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { loadCommentThreads, useCommentStore } from "@/lib/comment-store";
 import { getRealtimeClientId } from "@/lib/realtime-client-id";
 import type {
   RealtimeDurableEvent,
@@ -188,6 +189,8 @@ export function useBoardRealtime({
           queuedEventsRef.current = [];
           lastVersionRef.current = event.version;
           void refreshSnapshot(event.version);
+          // Comments aren't versioned; reload in case any were missed.
+          void loadCommentThreads(boardId);
         } else if (event.type === "presence.updated") {
           setMembers(event.members);
         } else if (event.type === "cursor.moved") {
@@ -210,6 +213,10 @@ export function useBoardRealtime({
           });
         } else if (event.type === "nodes.dragged") {
           useBoardStore.getState().previewRemoteNodePositions(event.nodes);
+        } else if (event.type === "comment.added") {
+          useCommentStore.getState().addComment(event.thread, event.comment);
+        } else if (event.type === "comment.resolved") {
+          useCommentStore.getState().removeThread(event.threadId);
         } else if (event.type === "access.changed") {
           if (event.role === null) {
             revokedRef.current = true;

@@ -9,25 +9,20 @@ interface DockMenuOption {
   name: string;
   icon: Icon;
   onSelect?: () => void;
+  active?: boolean;
 }
-
-const options: DockMenuOption[] = [
-  {
-    name: "properties",
-    icon: ChatCircleIcon,
-  },
-  {
-    name: "settings",
-    icon: PlugsIcon,
-  },
-];
 
 export function DockMenu({
   className,
   onAddText,
+  commenting = false,
+  onToggleComment,
 }: {
   className?: string;
   onAddText?: () => void;
+  /** Whether the comment tool is armed. */
+  commenting?: boolean;
+  onToggleComment?: () => void;
 }) {
   const menuOptions: DockMenuOption[] = [
     {
@@ -35,7 +30,16 @@ export function DockMenu({
       icon: ArticleIcon,
       onSelect: onAddText,
     },
-    ...options,
+    {
+      name: "comment",
+      icon: ChatCircleIcon,
+      onSelect: onToggleComment,
+      active: commenting,
+    },
+    {
+      name: "settings",
+      icon: PlugsIcon,
+    },
   ];
 
   return (
@@ -46,17 +50,18 @@ export function DockMenu({
         className,
       )}
     >
-      {menuOptions.map(({ name, icon: IconCmp, onSelect }) => (
+      {menuOptions.map(({ name, icon: IconCmp, onSelect, active }) => (
         <Button
           key={name}
           type="button"
-          variant="ghost"
+          variant={active ? "default" : "ghost"}
           size="icon"
           aria-label={name}
+          aria-pressed={active}
           title={name}
           onClick={onSelect}
         >
-          <IconCmp />
+          <IconCmp weight={active ? "fill" : "regular"} />
         </Button>
       ))}
     </div>

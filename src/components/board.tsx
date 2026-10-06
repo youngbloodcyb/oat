@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
+  type MouseEvent,
   type ReactNode,
   useCallback,
   useEffect,
@@ -23,6 +24,7 @@ import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
 import { BoardTitle } from "@/components/board-title";
 import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
+import { CommentLayer } from "@/components/comment-layer";
 import { DockMenu } from "@/components/dock-menu";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
@@ -44,7 +46,9 @@ import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
 import { useCanvasInputs } from "@/hooks/use-canvas-inputs";
+import { useCommentStore } from "@/lib/comment-store";
 import { type CanvasNode, useBoardStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import type { SavedBoardChat } from "@/services/board-chats";
 import type { BoardDetail } from "@/services/boards";
 import type { NodeSearchResult } from "@/services/search";
@@ -94,6 +98,14 @@ function BoardCanvas({
     enabled: ready && board.isShared,
     canEdit,
   });
+  const { placing, setPlacing, startDraft, dismissComment } = useCommentStore(
+    useShallow((s) => ({
+      placing: s.placing,
+      setPlacing: s.setPlacing,
+      startDraft: s.startDraft,
+      dismissComment: s.dismiss,
+    })),
+  );
   const canvasNodes = useMemo(
     () => [...nodes, ...pendingNodes],
     [nodes, pendingNodes],
@@ -117,6 +129,28 @@ function BoardCanvas({
   useEffect(() => {
     if (ready && focusNodeId) focusNode(focusNodeId);
   }, [focusNode, focusNodeId, ready]);
+
+  // Escape backs out one step: an open comment first, then the comment tool.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const comments = useCommentStore.getState();
+      if (comments.draft || comments.openThreadId) comments.dismiss();
+      else if (comments.placing) comments.setPlacing(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // With the comment tool armed, a click on the pane or a node starts a
+  // comment there; otherwise a click on empty board closes any open one.
+  const onCanvasClick = useCallback(
+    (event: MouseEvent) => {
+      if (!placing) return;
+      startDraft(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    },
+    [placing, screenToFlowPosition, startDraft],
+  );
 
   const onSelectSearchResult = useCallback(
     (result: NodeSearchResult) => {
@@ -180,7 +214,10 @@ function BoardCanvas({
 
   return (
     <SidebarInset
-      className="relative h-svh w-full overflow-hidden transition-[width] duration-200 ease-linear"
+      className={cn(
+        "relative h-svh w-full overflow-hidden transition-[width] duration-200 ease-linear",
+        placing && "comment-placing",
+      )}
       onPointerMove={(event) => {
         realtime.sendCursor(
           screenToFlowPosition({ x: event.clientX, y: event.clientY }),
@@ -195,8 +232,12 @@ function BoardCanvas({
           onNodesChange={onNodesChange}
           onDragOver={canEdit ? onDragOver : undefined}
           onDrop={canEdit ? onDrop : undefined}
-          nodesDraggable={canEdit}
+          nodesDraggable={canEdit && !placing}
+          elementsSelectable={!placing}
+          onPaneClick={placing ? onCanvasClick : dismissComment}
+          onNodeClick={onCanvasClick}
           onNodeDoubleClick={(_, node) => {
+            if (placing) return;
             if (canEdit && node.type === "text") openTextEditor(node.id);
           }}
           deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
@@ -221,6 +262,7 @@ function BoardCanvas({
           <Background gap={20} size={1} />
         </ReactFlow>
       </NodeEntranceProvider>
+      <CommentLayer boardId={boardId} canEdit={canEdit} />
       <RealtimeCursors cursors={realtime.cursors} />
       <Topbar
         board={board}
@@ -241,6 +283,8 @@ function BoardCanvas({
             ? () => addDraft({ kind: "text", text: "" }, viewportCenter())
             : undefined
         }
+        commenting={placing}
+        onToggleComment={() => setPlacing(!placing)}
       />
       {canEdit && <NodeDock boardId={boardId} />}
       {canEdit && <TextEditorDrawer />}

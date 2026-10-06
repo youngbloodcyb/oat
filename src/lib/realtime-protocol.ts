@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ClientNode } from "@/db/schema";
+import type { BoardComment, BoardCommentThreadMeta } from "@/lib/comments";
 import type { BoardAccessRole } from "@/services/board-access";
 
 export const realtimePositionSchema = z.object({
@@ -75,6 +76,18 @@ export type RealtimeDragEvent = RealtimeEventBase & {
   nodes: Array<{ id: string; position: { x: number; y: number } }>;
 };
 
+// Not versioned like durable events: comments merge by id, and the client
+// reloads them whenever it (re)connects.
+export type RealtimeCommentEvent = RealtimeEventBase &
+  (
+    | {
+        type: "comment.added";
+        thread: BoardCommentThreadMeta;
+        comment: BoardComment;
+      }
+    | { type: "comment.resolved"; threadId: string }
+  );
+
 export type RealtimePresenceChangedEvent = RealtimeEventBase & {
   type: "presence.changed";
 };
@@ -84,6 +97,7 @@ export type RealtimeBusEvent =
   | RealtimeAccessEvent
   | RealtimeCursorEvent
   | RealtimeDragEvent
+  | RealtimeCommentEvent
   | RealtimePresenceChangedEvent;
 
 export type RealtimeServerEvent =
@@ -91,6 +105,7 @@ export type RealtimeServerEvent =
   | RealtimeAccessEvent
   | RealtimeCursorEvent
   | RealtimeDragEvent
+  | RealtimeCommentEvent
   | {
       type: "ready";
       boardId: string;
@@ -121,3 +136,8 @@ export type RealtimeDurableEventInput = RealtimeDurableEventInputBase &
   );
 
 export type RealtimeAccessEventInput = Omit<RealtimeAccessEvent, "eventId">;
+
+// Distributes over the union so each variant keeps its own fields.
+type WithoutEventId<T> = T extends unknown ? Omit<T, "eventId"> : never;
+
+export type RealtimeCommentEventInput = WithoutEventId<RealtimeCommentEvent>;
