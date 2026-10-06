@@ -41,8 +41,8 @@ export function DockMenu({
   return (
     <div
       className={cn(
-        "absolute bottom-6 left-1/2 z-50 -translate-x-1/2",
-        "flex items-center gap-1 rounded-lg border bg-card/80 p-1 shadow-md backdrop-blur",
+        "fixed top-1/2 left-6 z-50 -translate-y-1/2",
+        "flex flex-col items-center gap-1 rounded-lg border bg-card/80 p-1 shadow-md backdrop-blur",
         className,
       )}
     >
@@ -55,7 +55,6 @@ export function DockMenu({
           aria-label={name}
           title={name}
           onClick={onSelect}
-          className="transition-transform duration-200 ease-out hover:scale-150 hover:bg-transparent motion-reduce:transition-none motion-reduce:hover:scale-100"
         >
           <IconCmp />
         </Button>

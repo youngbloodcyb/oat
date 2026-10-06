@@ -23,6 +23,7 @@ import { BoardCommandMenu } from "@/components/board-command-menu";
 import { BoardPermissionsProvider } from "@/components/board-permissions";
 import { BoardTitle } from "@/components/board-title";
 import { ChatSidebar, ChatSidebarTrigger } from "@/components/chat-sidebar";
+import { DockMenu } from "@/components/dock-menu";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { Loading } from "@/components/loading";
 import { NodeDock } from "@/components/node-dock";
@@ -225,6 +226,7 @@ function BoardCanvas({
           )
         }
       />
+      <DockMenu />
       {canEdit && <NodeDock boardId={boardId} />}
       {canEdit && <TextEditorDrawer />}
       {canEdit && <ImageCropDialog boardId={boardId} />}
