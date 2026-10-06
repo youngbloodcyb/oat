@@ -22,7 +22,11 @@ import { nodeEmbeddingSourceKey } from "@/lib/embedding-source";
 import { nodeSearchText } from "@/lib/node-search";
 import { publishDurableBoardEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess, requireNodeAccess } from "@/services/board-access";
-import { insertNode, scheduleNodeEmbedding } from "@/services/node-writes";
+import {
+  deleteNode,
+  insertNode,
+  scheduleNodeEmbedding,
+} from "@/services/node-writes";
 
 export async function listNodesByBoard(boardId: string): Promise<ClientNode[]> {
   const user = await requireUser();
@@ -163,18 +167,7 @@ export async function removeNode(
   realtimeSourceId?: string,
 ): Promise<void> {
   const user = await requireUser();
-  const { node } = await requireNodeAccess(nodeId, user.id, "edit");
-  const key = nodeObjectKey(node.data as NodeData);
-  const result = await db.delete(nodes).where(eq(nodes.id, nodeId));
-  if (result.rowCount === 0) throw new Error("Node not found");
-  await publishDurableBoardEvent({
-    type: "node.deleted",
-    boardId: node.boardId,
-    sourceId: realtimeSourceId,
-    actorUserId: user.id,
-    nodeId,
-  });
-  if (key) await deleteBlob(key);
+  await deleteNode({ userId: user.id, nodeId, realtimeSourceId });
 }
 
 export async function duplicateNode(input: {

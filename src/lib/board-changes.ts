@@ -30,6 +30,18 @@ export const addToBoardSchema = z.object({
 
 export type BoardAddition = z.infer<typeof boardAdditionSchema>;
 
+export const removeFromBoardSchema = z.object({
+  boardId: z.string().min(1).describe("The board id from the page context."),
+  nodeIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(20)
+    .describe("Ids of the items to delete, from the board tools."),
+});
+
+/** What the agent reports for each item it deleted. */
+export type RemovedNode = { id: string; type: string; title: string };
+
 /** Plain text to the HTML a text node stores. */
 export function textToHtml(text: string): string {
   const escapeHtml = (value: string) =>

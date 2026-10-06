@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   runSearch: vi.fn(),
   embedSearchQuery: vi.fn(),
   insertNode: vi.fn(),
+  deleteNode: vi.fn(),
 }));
 
 vi.mock("@/db", () => ({ db: { select: mocks.select } }));
@@ -18,15 +19,19 @@ vi.mock("@/lib/search-query", () => ({ runSearch: mocks.runSearch }));
 vi.mock("@/lib/embedding", () => ({
   embedSearchQuery: mocks.embedSearchQuery,
 }));
-vi.mock("@/services/node-writes", () => ({ insertNode: mocks.insertNode }));
+vi.mock("@/services/node-writes", () => ({
+  insertNode: mocks.insertNode,
+  deleteNode: mocks.deleteNode,
+}));
 
 import type { ToolContext } from "eve/tools";
 import type { StoredNode } from "@/db/schema";
-import { textToHtml } from "@/lib/board-additions";
+import { textToHtml } from "@/lib/board-changes";
 import { linkSuggestionsSchema } from "@/lib/link-suggestions";
 import addToBoard from "../tools/add_to_board";
 import getNode from "../tools/get_node";
 import listBoardNodes from "../tools/list_board_nodes";
+import removeFromBoard from "../tools/remove_from_board";
 import searchBoard from "../tools/search_board";
 import suggestLinks from "../tools/suggest_links";
 
@@ -284,5 +289,64 @@ describe("add_to_board", () => {
 describe("textToHtml", () => {
   it("keeps single line breaks inside a paragraph", () => {
     expect(textToHtml("a\nb")).toBe("<p>a<br>b</p>");
+  });
+});
+
+describe("remove_from_board", () => {
+  type Policy = (ctx: unknown) => Promise<unknown>;
+  const approve = (removeFromBoard as unknown as { approval: Policy }).approval;
+  const approvalCtx = (input: unknown) => ({
+    session: userCtx.session,
+    toolInput: input,
+  });
+  const onBoard = (id: string, boardId = "board-a") => ({
+    node: storedNode({
+      id,
+      boardId,
+      type: "link",
+      data: { kind: "link", url: `https://example.com/${id}` },
+    }),
+  });
+
+  it("asks the person before deleting items on this board", async () => {
+    mocks.requireBoardAccess.mockResolvedValue({ board: { id: "board-a" } });
+    mocks.requireNodeAccess.mockImplementation(async (id) => onBoard(id));
+    await expect(
+      approve(approvalCtx({ boardId: "board-a", nodeIds: ["n1", "n2"] })),
+    ).resolves.toBe("user-approval");
+  });
+
+  it("refuses ids from another board before showing a card", async () => {
+    mocks.requireBoardAccess.mockResolvedValue({ board: { id: "board-a" } });
+    mocks.requireNodeAccess.mockImplementation(async (id) =>
+      onBoard(id, "board-b"),
+    );
+    await expect(
+      approve(approvalCtx({ boardId: "board-a", nodeIds: ["n1"] })),
+    ).resolves.toMatchObject({ type: "denied" });
+  });
+
+  it("deletes each item and skips ones already gone", async () => {
+    mocks.requireBoardAccess.mockResolvedValue({ board: { id: "board-a" } });
+    mocks.requireNodeAccess.mockImplementation(async (id) => {
+      if (id === "gone") throw new Error("Node not found");
+      return onBoard(id);
+    });
+
+    const result = await run(
+      removeFromBoard,
+      { boardId: "board-a", nodeIds: ["n1", "gone"] },
+      userCtx,
+    );
+
+    expect(mocks.deleteNode).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteNode).toHaveBeenCalledWith({
+      userId: "user-a",
+      nodeId: "n1",
+    });
+    expect(result).toEqual({
+      removed: [{ id: "n1", type: "link", title: "https://example.com/n1" }],
+      missing: ["gone"],
+    });
   });
 });

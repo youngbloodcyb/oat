@@ -7,7 +7,7 @@ import {
   type BoardAddition,
   placeAdditions,
   textToHtml,
-} from "@/lib/board-additions";
+} from "@/lib/board-changes";
 import { detectFromText } from "@/lib/board-utils";
 import { embedNodeSize, parseEmbed } from "@/lib/embed";
 import { DEFAULT_STYLE } from "@/lib/node-style";

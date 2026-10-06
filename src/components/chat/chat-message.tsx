@@ -14,7 +14,10 @@ import type {
   EveMessagePart,
 } from "eve/react";
 import { type ReactNode, useEffect, useState } from "react";
-import { BoardAdditionCard } from "@/components/chat/board-addition-card";
+import {
+  BOARD_CHANGE_TOOLS,
+  BoardChangeCard,
+} from "@/components/chat/board-change-card";
 import { ChatMarkdown } from "@/components/chat/chat-markdown";
 import { LinkSuggestions } from "@/components/chat/link-suggestions";
 import { Button } from "@/components/ui/button";
@@ -115,13 +118,16 @@ function MessageParts({
   };
 
   parts.forEach((part, index) => {
-    if (part.type === "dynamic-tool" && toolNameOf(part) === "add_to_board") {
+    if (
+      part.type === "dynamic-tool" &&
+      BOARD_CHANGE_TOOLS.has(toolNameOf(part))
+    ) {
       flushTools(true);
       elements.push(
-        <BoardAdditionCard
+        <BoardChangeCard
           canRespond={canRespond}
           isSettled={index < parts.length - 1 || !showCaret}
-          key={`add:${part.toolCallId}`}
+          key={`change:${part.toolCallId}`}
           onRespond={onRespond}
           part={part}
         />,

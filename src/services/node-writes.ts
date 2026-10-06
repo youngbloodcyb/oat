@@ -1,4 +1,5 @@
 import { workflowEmbedNode } from "@workflows/embed";
+import { eq } from "drizzle-orm";
 import { start } from "workflow/api";
 import { db } from "@/db";
 import {
@@ -7,12 +8,17 @@ import {
   type NodeType,
   nodes,
 } from "@/db/schema";
-import { blobExists, nodeObjectKey, uploadKeyPrefix } from "@/lib/blob";
+import {
+  blobExists,
+  deleteBlob,
+  nodeObjectKey,
+  uploadKeyPrefix,
+} from "@/lib/blob";
 import { toClientNodeData } from "@/lib/client-node";
 import { nodeEmbeddingSourceKey } from "@/lib/embedding-source";
 import { nodeSearchText } from "@/lib/node-search";
 import { publishDurableBoardEvent } from "@/lib/realtime-redis";
-import { requireBoardAccess } from "@/services/board-access";
+import { requireBoardAccess, requireNodeAccess } from "@/services/board-access";
 
 // Not a server action module: these take a trusted `userId`, so only server
 // code that has already authenticated the caller (server actions, agent
@@ -86,4 +92,24 @@ export async function insertNode(input: {
   });
   if (embeddingSource) await scheduleNodeEmbedding(id);
   return node;
+}
+
+/** Deletes a node the user can edit, with its uploaded file, if any. */
+export async function deleteNode(input: {
+  userId: string;
+  nodeId: string;
+  realtimeSourceId?: string;
+}): Promise<void> {
+  const { node } = await requireNodeAccess(input.nodeId, input.userId, "edit");
+  const key = nodeObjectKey(node.data as NodeData);
+  const result = await db.delete(nodes).where(eq(nodes.id, input.nodeId));
+  if (result.rowCount === 0) throw new Error("Node not found");
+  await publishDurableBoardEvent({
+    type: "node.deleted",
+    boardId: node.boardId,
+    sourceId: input.realtimeSourceId,
+    actorUserId: input.userId,
+    nodeId: input.nodeId,
+  });
+  if (key) await deleteBlob(key);
 }
