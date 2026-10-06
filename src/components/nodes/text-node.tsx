@@ -4,7 +4,8 @@ import type { NodeProps } from "@xyflow/react";
 import { NodeShell } from "@/components/nodes/node-shell";
 import type { TextNode as TextNodeType } from "@/lib/store";
 
-// Read-only on the canvas. Editing happens in the drawer (dock → "Edit text").
+// Read-only on the canvas. Editing happens in the drawer, opened by
+// double-clicking the node (see board.tsx) or via the dock's "Edit text".
 // `data.text` holds HTML; the `.tiptap.ProseMirror` classes apply the same
 // typography styles as the editor (loaded via the SimpleEditor module).
 export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {

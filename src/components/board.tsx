@@ -75,11 +75,13 @@ function BoardCanvas({
     nodes,
     pendingNodes,
     onNodesChange: applyChanges,
+    openTextEditor,
   } = useBoardStore(
     useShallow((s) => ({
       nodes: s.nodes,
       pendingNodes: s.pendingNodes,
       onNodesChange: s.onNodesChange,
+      openTextEditor: s.openTextEditor,
     })),
   );
   const { onDragOver, onDrop, viewportCenter } = useCanvasInputs(
@@ -194,6 +196,9 @@ function BoardCanvas({
           onDragOver={canEdit ? onDragOver : undefined}
           onDrop={canEdit ? onDrop : undefined}
           nodesDraggable={canEdit}
+          onNodeDoubleClick={(_, node) => {
+            if (canEdit && node.type === "text") openTextEditor(node.id);
+          }}
           deleteKeyCode={canEdit ? ["Backspace", "Delete"] : null}
           onNodeDrag={(_, __, dragged) => {
             if (!canEdit) return;
