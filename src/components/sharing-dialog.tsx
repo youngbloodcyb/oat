@@ -108,9 +108,13 @@ export function SharingDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className={cn(className)}>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Share"
+          className={cn(className)}
+        >
           <ShareNetworkIcon />
-          Share
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   type ReactNode,
   useCallback,
@@ -33,10 +34,10 @@ import {
   RealtimePresence,
 } from "@/components/realtime-collaboration";
 import { SharingDialog } from "@/components/sharing-dialog";
-import { SignOutButton } from "@/components/sign-out-button";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { UserMenu } from "@/components/user-menu";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
 import { useBoardSync } from "@/hooks/use-board-sync";
@@ -62,6 +63,7 @@ function BoardCanvas({
 }) {
   const boardId = board.id;
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const { fitView, screenToFlowPosition } = useReactFlow<CanvasNode>();
   const [commandOpen, setCommandOpen] = useState(false);
   const ready = useBoardSync(boardId);
@@ -202,6 +204,7 @@ function BoardCanvas({
             });
           }}
           fitView
+          colorMode={resolvedTheme === "dark" ? "dark" : "light"}
           proOptions={proOptions}
         >
           <Background gap={20} size={1} />
@@ -268,24 +271,29 @@ function Topbar({
           {presence && (
             <div className="flex items-center gap-1.5">{presence}</div>
           )}
-          {board.accessRole === "owner" && (
-            <SharingDialog
-              boardId={board.id}
-              boardName={board.name}
-              members={shares}
-            />
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSearch}
-            disabled={!onSearch}
-          >
-            <MagnifyingGlassIcon />
-            Search
-          </Button>
-          <ChatSidebarTrigger />
-          <SignOutButton />
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSearch}
+              disabled={!onSearch}
+            >
+              <MagnifyingGlassIcon />
+              Search
+              <kbd className="ml-1 font-sans text-[0.625rem] tracking-widest text-muted-foreground">
+                ⌘K
+              </kbd>
+            </Button>
+            {board.accessRole === "owner" && (
+              <SharingDialog
+                boardId={board.id}
+                boardName={board.name}
+                members={shares}
+              />
+            )}
+            <ChatSidebarTrigger />
+          </div>
+          <UserMenu />
         </>
       }
     />

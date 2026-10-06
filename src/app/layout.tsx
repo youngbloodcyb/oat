@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "@xyflow/react/dist/style.css";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
+import { Agentation } from "agentation";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
-import { Agentation } from "agentation";
-import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -32,6 +33,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      // next-themes sets the theme class before hydration.
+      suppressHydrationWarning
       className={cn(
         "h-full",
         "antialiased",
@@ -42,8 +45,10 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
-        {children}
-        <Toaster />
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
         {process.env.NODE_ENV === "development" && <Agentation />}
         <Analytics />
       </body>

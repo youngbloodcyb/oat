@@ -57,9 +57,16 @@ export function ChatSidebarTrigger() {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <Button variant="outline" size="sm" onClick={toggleSidebar}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={toggleSidebar}
+      aria-label="Chat"
+    >
       <ChatCircleIcon />
-      Chat
+      <kbd className="ml-1 font-sans text-[0.625rem] tracking-widest text-muted-foreground">
+        ⌘B
+      </kbd>
     </Button>
   );
 }
