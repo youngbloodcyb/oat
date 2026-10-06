@@ -3,14 +3,11 @@
 import type { Icon } from "@phosphor-icons/react";
 import {
   ArrowUpRightIcon,
-  FilePdfIcon,
-  ImageIcon,
-  LinkIcon,
   SpinnerGapIcon,
   SquaresFourIcon,
-  TextTIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { nodeIcons } from "@/components/node-icons";
 import {
   Command,
   CommandDialog,
@@ -22,7 +19,6 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import type { NodeType } from "@/db/schema";
 import {
   type BoardSearchResults,
   type NodeSearchResult,
@@ -31,13 +27,6 @@ import {
 } from "@/services/search";
 
 const NO_RESULTS: BoardSearchResults = { currentBoard: [], otherBoards: [] };
-
-const nodeIcons: Record<NodeType, Icon> = {
-  link: LinkIcon,
-  text: TextTIcon,
-  image: ImageIcon,
-  pdf: FilePdfIcon,
-};
 
 export type BoardCommandAction = {
   id: string;
