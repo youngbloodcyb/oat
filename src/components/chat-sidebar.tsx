@@ -53,7 +53,7 @@ export function ChatSidebar({
   );
 }
 
-export function ChatSidebarTrigger() {
+export function ChatSidebarTrigger({ disabled }: { disabled?: boolean }) {
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -61,6 +61,7 @@ export function ChatSidebarTrigger() {
       variant="outline"
       size="sm"
       onClick={toggleSidebar}
+      disabled={disabled}
       aria-label="Chat"
     >
       <ChatCircleIcon />

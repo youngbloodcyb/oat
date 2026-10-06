@@ -37,6 +37,7 @@ import { SharingDialog } from "@/components/sharing-dialog";
 import { TextEditorDrawer } from "@/components/text-editor-drawer";
 import { Button } from "@/components/ui/button";
 import { SidebarInset } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { UserMenu } from "@/components/user-menu";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import { useBoardRealtime } from "@/hooks/use-board-realtime";
@@ -237,14 +238,19 @@ function BoardCanvas({
   );
 }
 
+/**
+ * The board's topbar. Without a board it's the loading state: parts that
+ * need the board's data are skeletons and the rest render disabled, at the
+ * same sizes, so nothing shifts when the board arrives.
+ */
 function Topbar({
   board,
-  shares,
+  shares = [],
   presence,
   onSearch,
 }: {
-  board: BoardDetail;
-  shares: BoardShareMember[];
+  board?: BoardDetail;
+  shares?: BoardShareMember[];
   presence?: ReactNode;
   /** Opens board search; the button stays disabled until the board is ready. */
   onSearch?: () => void;
@@ -253,21 +259,23 @@ function Topbar({
     <AppTopbar
       left={<BackToBoardsButton />}
       center={
-        <BoardTitle
-          boardId={board.id}
-          name={board.name}
-          editable={board.accessRole === "owner"}
-        />
+        board ? (
+          <BoardTitle
+            boardId={board.id}
+            name={board.name}
+            editable={board.accessRole === "owner"}
+          />
+        ) : (
+          <Skeleton className="h-4 w-32" />
+        )
       }
       right={
         <>
-          <span className="text-xs font-medium text-muted-foreground">
-            {board.accessRole === "owner"
-              ? null
-              : board.accessRole === "viewer"
-                ? "View only"
-                : "Can edit"}
-          </span>
+          {board && board.accessRole !== "owner" && (
+            <span className="text-xs font-medium text-muted-foreground">
+              {board.accessRole === "viewer" ? "View only" : "Can edit"}
+            </span>
+          )}
           {presence && (
             <div className="flex items-center gap-1.5">{presence}</div>
           )}
@@ -284,14 +292,20 @@ function Topbar({
                 ⌘K
               </kbd>
             </Button>
-            {board.accessRole === "owner" && (
-              <SharingDialog
-                boardId={board.id}
-                boardName={board.name}
-                members={shares}
-              />
+            {/* Held for while loading: only owners get it, but most boards
+                opened are your own, so this keeps Search from jumping. */}
+            {!board ? (
+              <Skeleton className="size-6" />
+            ) : (
+              board.accessRole === "owner" && (
+                <SharingDialog
+                  boardId={board.id}
+                  boardName={board.name}
+                  members={shares}
+                />
+              )
             )}
-            <ChatSidebarTrigger />
+            <ChatSidebarTrigger disabled={!board} />
           </div>
           <UserMenu />
         </>
@@ -316,7 +330,7 @@ function BackToBoardsButton() {
 export function BoardLoading() {
   return (
     <>
-      <AppTopbar left={<BackToBoardsButton />} />
+      <Topbar />
       <Loading />
     </>
   );
