@@ -13,6 +13,7 @@ import {
   ChatScrollButton,
 } from "@/components/chat/chat-conversation";
 import { ChatMessage } from "@/components/chat/chat-message";
+import { AddLinkProvider } from "@/components/chat/link-suggestions";
 import { Button } from "@/components/ui/button";
 import { useBoardActions } from "@/hooks/use-board-actions";
 import {
@@ -97,7 +98,7 @@ export function BoardChat({
   };
 
   return (
-    <>
+    <AddLinkProvider onAdd={canEdit ? addLink : undefined}>
       <ChatConversation>
         <ChatConversationContent>
           {messages.length === 0 && !isResuming ? (
@@ -109,7 +110,6 @@ export function BoardChat({
                 isStreaming={isBusy && message === last}
                 key={message.id}
                 message={message}
-                onAddLink={canEdit ? addLink : undefined}
                 onRespond={(responses) => {
                   agent
                     .respond(responses)
@@ -137,7 +137,7 @@ export function BoardChat({
           value={draft}
         />
       </div>
-    </>
+    </AddLinkProvider>
   );
 }
 
