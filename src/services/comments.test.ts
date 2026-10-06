@@ -87,6 +87,8 @@ describe("comments", () => {
     );
 
     const created = await createCommentThread({
+      threadId: "00000000-0000-4000-8000-000000000001",
+      commentId: "00000000-0000-4000-8000-000000000002",
       boardId: board.id,
       position: { x: 1, y: 2 },
       body: "  Looks good  ",
@@ -97,6 +99,8 @@ describe("comments", () => {
       viewer.id,
       "view",
     );
+    expect(created.id).toBe("00000000-0000-4000-8000-000000000001");
+    expect(created.comments[0].id).toBe("00000000-0000-4000-8000-000000000002");
     expect(created.position).toEqual({ x: 1, y: 2 });
     expect(created.comments).toHaveLength(1);
     expect(created.comments[0].body).toBe("Looks good");
@@ -112,6 +116,8 @@ describe("comments", () => {
   it("rejects empty comments", async () => {
     await expect(
       createCommentThread({
+        threadId: crypto.randomUUID(),
+        commentId: crypto.randomUUID(),
         boardId: board.id,
         position: { x: 0, y: 0 },
         body: "   ",
@@ -130,6 +136,7 @@ describe("comments", () => {
 
     const reply = await replyToCommentThread({
       threadId: thread.id,
+      commentId: crypto.randomUUID(),
       body: "Agreed",
     });
 

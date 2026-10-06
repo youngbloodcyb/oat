@@ -18,6 +18,9 @@ import { requireBoardAccess } from "@/services/board-access";
 
 const idSchema = z.string().min(1).max(200);
 const bodySchema = z.string().trim().min(1).max(MAX_COMMENT_CHARS);
+// The client picks new ids so its optimistic copy and the realtime echo of
+// the saved one share an id and merge.
+const newIdSchema = z.uuid();
 
 const authorColumns = {
   id: users.id,
@@ -119,6 +122,8 @@ export async function listCommentThreads(
 
 /** Pins a new comment to the board. Anyone who can view the board may comment. */
 export async function createCommentThread(input: {
+  threadId: string;
+  commentId: string;
   boardId: string;
   position: { x: number; y: number };
   body: string;
@@ -126,6 +131,8 @@ export async function createCommentThread(input: {
   const currentUser = await requireUser();
   const parsed = z
     .object({
+      threadId: newIdSchema,
+      commentId: newIdSchema,
       boardId: idSchema,
       position: realtimePositionSchema,
       body: bodySchema,
@@ -134,8 +141,7 @@ export async function createCommentThread(input: {
   await requireBoardAccess(parsed.boardId, currentUser.id, "view");
 
   const createdAt = new Date();
-  const threadId = crypto.randomUUID();
-  const commentId = crypto.randomUUID();
+  const { threadId, commentId } = parsed;
   await db.transaction(async (tx) => {
     await tx.insert(commentThreads).values({
       id: threadId,
@@ -185,16 +191,17 @@ export async function createCommentThread(input: {
 
 export async function replyToCommentThread(input: {
   threadId: string;
+  commentId: string;
   body: string;
 }): Promise<BoardComment> {
   const currentUser = await requireUser();
   const parsed = z
-    .object({ threadId: idSchema, body: bodySchema })
+    .object({ threadId: idSchema, commentId: newIdSchema, body: bodySchema })
     .parse(input);
   const { thread } = await requireThreadAccess(parsed.threadId, currentUser.id);
 
   const createdAt = new Date();
-  const commentId = crypto.randomUUID();
+  const { commentId } = parsed;
   await db.insert(comments).values({
     id: commentId,
     threadId: thread.id,

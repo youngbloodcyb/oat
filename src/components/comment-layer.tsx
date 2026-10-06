@@ -15,18 +15,19 @@ import { useShallow } from "zustand/react/shallow";
 import { colorFor, initials } from "@/components/realtime-collaboration";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { loadCommentThreads, useCommentStore } from "@/lib/comment-store";
+import {
+  loadCommentThreads,
+  postCommentReply,
+  postCommentThread,
+  resolveThread,
+  useCommentStore,
+} from "@/lib/comment-store";
 import {
   type BoardCommentThread,
   type CommentAuthor,
   MAX_COMMENT_CHARS,
 } from "@/lib/comments";
 import { cn } from "@/lib/utils";
-import {
-  createCommentThread,
-  replyToCommentThread,
-  resolveCommentThread,
-} from "@/services/comments";
 
 const PIN_SIZE = 32;
 const CARD_WIDTH = 288;
@@ -102,19 +103,21 @@ function Pin({
   );
 }
 
-// Escape is handled by the board, which closes the open comment.
+// Escape is handled by the board, which closes the open comment. Posting is
+// optimistic, so the box clears right away; a failed save shows a toast.
 function Composer({
   placeholder,
+  disabled = false,
   onSubmit,
 }: {
   placeholder: string;
-  onSubmit: (body: string) => Promise<void>;
+  disabled?: boolean;
+  onSubmit: (body: string) => void;
 }) {
   const [value, setValue] = useState("");
-  const [busy, setBusy] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const trimmed = value.trim();
-  const canSubmit = !busy && trimmed.length > 0;
+  const canSubmit = !disabled && trimmed.length > 0;
 
   useEffect(() => {
     const frame = requestAnimationFrame(() =>
@@ -123,23 +126,16 @@ function Composer({
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const submit = async () => {
+  const submit = () => {
     if (!canSubmit) return;
-    setBusy(true);
-    try {
-      await onSubmit(trimmed);
-      setValue("");
-    } catch {
-      toast.error("Couldn't post comment");
-    } finally {
-      setBusy(false);
-    }
+    onSubmit(trimmed);
+    setValue("");
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      void submit();
+      submit();
     }
   };
 
@@ -148,7 +144,7 @@ function Composer({
       className="flex items-end gap-1.5 p-2"
       onSubmit={(event) => {
         event.preventDefault();
-        void submit();
+        submit();
       }}
     >
       <textarea
@@ -193,16 +189,20 @@ function Card({
 
 function ThreadCard({
   thread,
+  currentUser,
   canResolve,
   style,
   onClose,
 }: {
   thread: BoardCommentThread;
+  /** Null until the session loads; replying waits for it. */
+  currentUser: CommentAuthor | null;
   canResolve: boolean;
   style: CSSProperties;
   onClose: () => void;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  const pendingIds = useCommentStore((s) => s.pendingIds);
   const count = thread.comments.length;
 
   // Keep the newest reply in view as the thread grows.
@@ -210,13 +210,8 @@ function ThreadCard({
     if (count > 0) listRef.current?.scrollTo({ top: Number.MAX_SAFE_INTEGER });
   }, [count]);
 
-  const resolve = async () => {
-    try {
-      await resolveCommentThread({ threadId: thread.id });
-      useCommentStore.getState().removeThread(thread.id);
-    } catch {
-      toast.error("Couldn't resolve comment");
-    }
+  const resolve = () => {
+    resolveThread(thread).catch(() => toast.error("Couldn't resolve comment"));
   };
 
   return (
@@ -231,7 +226,7 @@ function ThreadCard({
               size="icon-sm"
               aria-label="Resolve"
               title="Resolve"
-              onClick={() => void resolve()}
+              onClick={resolve}
             >
               <CheckIcon weight="bold" />
             </Button>
@@ -250,7 +245,13 @@ function ThreadCard({
       </div>
       <div ref={listRef} className="flex max-h-72 flex-col overflow-y-auto">
         {thread.comments.map((comment) => (
-          <div key={comment.id} className="flex gap-2 px-3 py-2">
+          <div
+            key={comment.id}
+            className={cn(
+              "flex gap-2 px-3 py-2 transition-opacity",
+              pendingIds.has(comment.id) && "opacity-60",
+            )}
+          >
             <Avatar author={comment.author} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-1.5">
@@ -272,12 +273,12 @@ function ThreadCard({
         <Composer
           key={thread.id}
           placeholder="Reply…"
-          onSubmit={async (body) => {
-            const comment = await replyToCommentThread({
-              threadId: thread.id,
-              body,
-            });
-            useCommentStore.getState().addComment(thread, comment);
+          disabled={!currentUser}
+          onSubmit={(body) => {
+            if (!currentUser) return;
+            postCommentReply({ thread, body, author: currentUser }).catch(() =>
+              toast.error("Couldn't post reply"),
+            );
           }}
         />
       </div>
@@ -339,11 +340,13 @@ export function CommentLayer({
   const openThreadData = visible
     ? threads.find((thread) => thread.id === openThreadId)
     : undefined;
-  const draftAuthor: CommentAuthor | undefined = currentUser && {
-    id: currentUser.id,
-    name: currentUser.name,
-    image: currentUser.image ?? null,
-  };
+  const author: CommentAuthor | null = currentUser
+    ? {
+        id: currentUser.id,
+        name: currentUser.name,
+        image: currentUser.image ?? null,
+      }
+    : null;
 
   return (
     <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
@@ -361,21 +364,24 @@ export function CommentLayer({
         ))}
       {draft && (
         <>
-          <Pin author={draftAuthor} active style={pinStyle(toScreen(draft))} />
+          <Pin
+            author={author ?? undefined}
+            active
+            style={pinStyle(toScreen(draft))}
+          />
           <Card style={cardStyle(toScreen(draft))}>
             <Composer
               key={`${draft.x},${draft.y}`}
               placeholder="Add a comment…"
-              onSubmit={async (body) => {
-                const thread = await createCommentThread({
+              disabled={!author}
+              onSubmit={(body) => {
+                if (!author) return;
+                postCommentThread({
                   boardId,
                   position: draft,
                   body,
-                });
-                const store = useCommentStore.getState();
-                store.addComment(thread, thread.comments[0]);
-                store.setPlacing(false);
-                store.openThread(thread.id);
+                  author,
+                }).catch(() => toast.error("Couldn't post comment"));
               }}
             />
           </Card>
@@ -384,6 +390,7 @@ export function CommentLayer({
       {openThreadData && (
         <ThreadCard
           thread={openThreadData}
+          currentUser={author}
           canResolve={canEdit || openThreadData.author.id === currentUser?.id}
           style={cardStyle(toScreen(openThreadData.position))}
           onClose={dismiss}
