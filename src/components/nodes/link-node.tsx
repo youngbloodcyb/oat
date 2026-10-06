@@ -46,7 +46,12 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
       className={embed ? "flex flex-col" : undefined}
     >
       {embed ? (
-        <EmbedPlayer key={embed.src} embed={embed} title={data.og?.title} />
+        <EmbedPlayer
+          key={embed.src}
+          embed={embed}
+          title={data.og?.title}
+          fallbackPoster={data.og?.image}
+        />
       ) : data.og?.image && !imageFailed ? (
         <img
           src={data.og.image}
@@ -84,33 +89,55 @@ export function LinkNode({ id, data, selected }: NodeProps<LinkNodeType>) {
 }
 
 /**
- * A link that plays inline. Shows the poster until play is pressed, then
- * swaps in the provider's player, so a board full of videos stays light.
- * Only the play button starts it; the rest of the poster still selects and
- * drags the node, and the title strip below stays a handle once it's playing.
+ * A link that plays inline. Heavy players show a poster until play is
+ * pressed, so a board full of videos stays light. Only the play button
+ * starts one; the rest of the poster still selects and drags the node, and
+ * the title strip below stays a handle once the player is up.
  */
-function EmbedPlayer({ embed, title }: { embed: Embed; title?: string }) {
-  const [playing, setPlaying] = useState(false);
+function EmbedPlayer({
+  embed,
+  title,
+  fallbackPoster,
+}: {
+  embed: Embed;
+  title?: string;
+  fallbackPoster?: string;
+}) {
+  const [playing, setPlaying] = useState(embed.load === "eager");
   const [posterFailed, setPosterFailed] = useState(false);
+  const poster = embed.thumbnail ?? fallbackPoster;
+
+  if (playing && embed.player === "video") {
+    return (
+      // biome-ignore lint/a11y/useMediaCaption: arbitrary linked videos have no captions to offer.
+      <video
+        src={embed.src}
+        controls
+        playsInline
+        preload="metadata"
+        className="nodrag min-h-0 w-full flex-1 bg-black object-contain"
+      />
+    );
+  }
 
   if (playing) {
     return (
       <iframe
         src={embed.src}
-        title={title ?? "Video player"}
+        title={title ?? "Embedded player"}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowFullScreen
         referrerPolicy="strict-origin-when-cross-origin"
-        className="nodrag nowheel min-h-0 w-full flex-1 bg-black"
+        className="nodrag nowheel min-h-0 w-full flex-1"
       />
     );
   }
 
   return (
     <div className="relative min-h-0 flex-1 bg-black">
-      {!posterFailed && (
+      {poster && !posterFailed && (
         <img
-          src={embed.thumbnail}
+          src={poster}
           alt=""
           className="h-full w-full object-cover"
           onError={() => setPosterFailed(true)}
@@ -118,9 +145,9 @@ function EmbedPlayer({ embed, title }: { embed: Embed; title?: string }) {
       )}
       <button
         type="button"
-        aria-label="Play video"
+        aria-label="Play"
         onClick={() => setPlaying(true)}
-        className="nodrag absolute top-1/2 left-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/70 text-white shadow-md transition-colors hover:bg-red-600"
+        className="nodrag absolute top-1/2 left-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-black/70 text-white shadow-md transition-colors hover:bg-black/90"
       >
         <PlayIcon weight="fill" className="size-5" />
       </button>
