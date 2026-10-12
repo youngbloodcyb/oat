@@ -32,6 +32,7 @@ import { publishAccessEvent } from "@/lib/realtime-redis";
 import { requireBoardAccess } from "@/services/board-access";
 import {
   addBoardShare,
+  leaveBoard,
   listBoardShares,
   removeBoardShare,
   updateBoardShare,
@@ -179,6 +180,31 @@ describe("board shares", () => {
       userId: "member-a",
       role: null,
     });
+  });
+
+  it("lets a member remove their own share", async () => {
+    mockRequireUser.mockResolvedValue({ ...owner, id: "member-a" });
+    const remove = chainable({ rowCount: 1 });
+    db.delete.mockReturnValue(remove);
+
+    await leaveBoard(board.id);
+
+    expect(remove.where).toHaveBeenCalled();
+    expect(mockRequireBoardAccess).not.toHaveBeenCalled();
+    expect(mockPublishAccessEvent).toHaveBeenCalledWith({
+      type: "access.changed",
+      boardId: board.id,
+      userId: "member-a",
+      role: null,
+    });
+  });
+
+  it("rejects leaving a board that isn't shared with the user", async () => {
+    db.delete.mockReturnValue(chainable({ rowCount: 0 }));
+    await expect(leaveBoard(board.id)).rejects.toThrow(
+      "Shared board not found",
+    );
+    expect(mockPublishAccessEvent).not.toHaveBeenCalled();
   });
 
   it("prevents non-owners from managing shares", async () => {

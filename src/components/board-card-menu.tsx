@@ -1,6 +1,11 @@
 "use client";
 
-import { DotsThreeIcon, LinkIcon, TrashIcon } from "@phosphor-icons/react";
+import {
+  DotsThreeIcon,
+  LinkIcon,
+  SignOutIcon,
+  TrashIcon,
+} from "@phosphor-icons/react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,18 +25,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { deleteBoard } from "@/services/boards";
+import { leaveBoard } from "@/services/shares";
 
+// Owners can delete the board; members it's shared with can leave it.
 export function BoardCardMenu({
   boardId,
   boardName,
-  canDelete,
+  isOwner,
 }: {
   boardId: string;
   boardName: string;
-  canDelete: boolean;
+  isOwner: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, startDelete] = useTransition();
+  const [pending, startTransition] = useTransition();
 
   const copyLink = async () => {
     try {
@@ -44,15 +51,22 @@ export function BoardCardMenu({
     }
   };
 
-  const confirmDelete = () => {
-    startDelete(async () => {
+  const confirm = () => {
+    startTransition(async () => {
       try {
-        // The action revalidates the boards list, removing this card.
-        await deleteBoard(boardId);
+        // Both actions revalidate the boards list, removing this card.
+        if (isOwner) {
+          await deleteBoard(boardId);
+          toast.success("Board deleted");
+        } else {
+          await leaveBoard(boardId);
+          toast.success("Left board");
+        }
         setConfirmOpen(false);
-        toast.success("Board deleted");
       } catch {
-        toast.error("Couldn't delete this board");
+        toast.error(
+          isOwner ? "Couldn't delete this board" : "Couldn't leave this board",
+        );
       }
     });
   };
@@ -70,37 +84,40 @@ export function BoardCardMenu({
             <LinkIcon />
             Copy link
           </DropdownMenuItem>
-          {canDelete && (
-            <DropdownMenuItem
-              variant="destructive"
-              onSelect={() => setConfirmOpen(true)}
-            >
-              <TrashIcon />
-              Delete
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => setConfirmOpen(true)}
+          >
+            {isOwner ? <TrashIcon /> : <SignOutIcon />}
+            {isOwner ? "Delete" : "Leave"}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete {boardName}?</DialogTitle>
+            <DialogTitle>
+              {isOwner ? "Delete" : "Leave"} {boardName}?
+            </DialogTitle>
             <DialogDescription>
-              Everything on this board will be deleted for you and anyone it is
-              shared with. This can&rsquo;t be undone.
+              {isOwner
+                ? "Everything on this board will be deleted for you and anyone it is shared with. This can’t be undone."
+                : "You’ll lose access to this board. The owner will need to share it with you again for you to get it back."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button
-              variant="destructive"
-              disabled={deleting}
-              onClick={confirmDelete}
-            >
-              {deleting ? "Deleting…" : "Delete board"}
+            <Button variant="destructive" disabled={pending} onClick={confirm}>
+              {isOwner
+                ? pending
+                  ? "Deleting…"
+                  : "Delete board"
+                : pending
+                  ? "Leaving…"
+                  : "Leave board"}
             </Button>
           </DialogFooter>
         </DialogContent>

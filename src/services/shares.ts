@@ -156,3 +156,27 @@ export async function removeBoardShare(input: {
   });
   refreshBoardPaths(parsed.boardId);
 }
+
+// A member removing their own share. Owners can't leave their own board;
+// they delete it instead.
+export async function leaveBoard(boardIdInput: string): Promise<void> {
+  const currentUser = await requireUser();
+  const boardId = boardIdSchema.parse(boardIdInput);
+
+  const result = await db
+    .delete(boardShares)
+    .where(
+      and(
+        eq(boardShares.boardId, boardId),
+        eq(boardShares.userId, currentUser.id),
+      ),
+    );
+  if (result.rowCount === 0) throw new Error("Shared board not found");
+  await publishAccessEvent({
+    type: "access.changed",
+    boardId,
+    userId: currentUser.id,
+    role: null,
+  });
+  refreshBoardPaths(boardId);
+}

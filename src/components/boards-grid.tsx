@@ -60,7 +60,7 @@ export async function BoardsGrid() {
             <BoardCardMenu
               boardId={b.id}
               boardName={b.name}
-              canDelete={b.accessRole === "owner"}
+              isOwner={b.accessRole === "owner"}
             />
           </div>
         </li>
