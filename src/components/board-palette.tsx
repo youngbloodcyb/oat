@@ -27,6 +27,18 @@ function shownColors(colors: PaletteColor[]): PaletteColor[] {
     );
 }
 
+// The likeliest color of each role leads; the rest sit behind "show more".
+function splitLeadColors(colors: PaletteColor[]): {
+  lead: PaletteColor[];
+  more: PaletteColor[];
+} {
+  const lead = SHOWN_ROLES.flatMap((role) => {
+    const first = colors.find((c) => c.role === role);
+    return first ? [first] : [];
+  });
+  return { lead, more: colors.filter((c) => !lead.includes(c)) };
+}
+
 function byNode(rows: ImagePalette[]): Map<string, ImagePalette> {
   return new Map(rows.map((row) => [row.nodeId, row]));
 }
@@ -139,16 +151,44 @@ export function BoardPalette({
                 No brand colors found.
               </p>
             ) : (
-              <div className="flex min-w-0 flex-wrap gap-2">
-                {colors.map((color) => (
-                  <Swatch key={color.hex} color={color} />
-                ))}
-              </div>
+              <ImageColors colors={colors} />
             )}
           </li>
         );
       })}
     </ul>
+  );
+}
+
+function ImageColors({ colors }: { colors: PaletteColor[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const { lead, more } = splitLeadColors(colors);
+  const shown = expanded ? [...lead, ...more] : lead;
+
+  return (
+    <div className="flex min-w-0 flex-wrap gap-2">
+      {shown.map((color) => (
+        <Swatch key={color.hex} color={color} />
+      ))}
+      {more.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-label={
+            expanded ? "Show fewer colors" : `Show ${more.length} more colors`
+          }
+          className="flex flex-col items-center gap-1"
+        >
+          <span className="flex size-9 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground transition-colors hover:bg-muted">
+            {expanded ? "−" : `+${more.length}`}
+          </span>
+          <span className="text-[0.625rem] text-muted-foreground">
+            {expanded ? "less" : "more"}
+          </span>
+        </button>
+      )}
+    </div>
   );
 }
 
