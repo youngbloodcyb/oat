@@ -2,8 +2,10 @@ import {
   stepDeleteEmbedding,
   stepEmbedImage,
   stepEmbedText,
+  stepExtractPalette,
   stepGetNodeEmbeddingSource,
   stepUpsertEmbedding,
+  stepUpsertPalette,
 } from "./steps";
 
 export async function workflowEmbedNode(nodeId: string) {
@@ -25,4 +27,13 @@ export async function workflowEmbedNode(nodeId: string) {
     sourceKey: source.sourceKey,
     embedding,
   });
+
+  if (source.kind === "image") {
+    const palette = await stepExtractPalette(source.objectKey);
+    await stepUpsertPalette({
+      nodeId,
+      sourceKey: source.sourceKey,
+      palette,
+    });
+  }
 }

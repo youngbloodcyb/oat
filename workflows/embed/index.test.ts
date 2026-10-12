@@ -6,6 +6,8 @@ const steps = vi.hoisted(() => ({
   embedImage: vi.fn(),
   upsertEmbedding: vi.fn(),
   deleteEmbedding: vi.fn(),
+  extractPalette: vi.fn(),
+  upsertPalette: vi.fn(),
 }));
 
 vi.mock("./steps", () => ({
@@ -14,6 +16,8 @@ vi.mock("./steps", () => ({
   stepEmbedImage: steps.embedImage,
   stepUpsertEmbedding: steps.upsertEmbedding,
   stepDeleteEmbedding: steps.deleteEmbedding,
+  stepExtractPalette: steps.extractPalette,
+  stepUpsertPalette: steps.upsertPalette,
 }));
 
 import { workflowEmbedNode } from "./index";
@@ -24,6 +28,8 @@ beforeEach(() => {
   steps.embedImage.mockResolvedValue([0.3, 0.4]);
   steps.upsertEmbedding.mockResolvedValue(undefined);
   steps.deleteEmbedding.mockResolvedValue(undefined);
+  steps.extractPalette.mockResolvedValue({ scoredBy: "model", colors: [] });
+  steps.upsertPalette.mockResolvedValue(undefined);
 });
 
 describe("workflowEmbedNode", () => {
@@ -42,6 +48,7 @@ describe("workflowEmbedNode", () => {
       text: "Quarterly roadmap",
     });
     expect(steps.embedImage).not.toHaveBeenCalled();
+    expect(steps.extractPalette).not.toHaveBeenCalled();
     expect(steps.upsertEmbedding).toHaveBeenCalledWith({
       nodeId: "node-1",
       sourceKey: "text-key",
@@ -64,6 +71,12 @@ describe("workflowEmbedNode", () => {
       nodeId: "image-1",
       sourceKey: "image-key",
       embedding: [0.3, 0.4],
+    });
+    expect(steps.extractPalette).toHaveBeenCalledWith("user-a/board-a/image");
+    expect(steps.upsertPalette).toHaveBeenCalledWith({
+      nodeId: "image-1",
+      sourceKey: "image-key",
+      palette: { scoredBy: "model", colors: [] },
     });
   });
 

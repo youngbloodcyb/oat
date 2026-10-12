@@ -1,9 +1,16 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { embeddings, nodes } from "@/db/schema";
+import { embeddings, nodes, palettes } from "@/db/schema";
 import { embedSearchDocument, embedSearchImage } from "@/lib/embedding";
 import { loadImageEmbeddingInput } from "@/lib/image-embedding";
 import { nodeSearchTitle } from "@/lib/node-search";
+import {
+  extractPaletteCandidates,
+  loadPaletteImage,
+  type Palette,
+  scorePaletteHeuristically,
+} from "@/lib/palette";
+import { scorePaletteWithModel } from "@/lib/palette-decisions";
 
 export type NodeEmbeddingSource =
   | {
@@ -115,4 +122,68 @@ export async function stepDeleteEmbedding(nodeId: string) {
   "use step";
 
   await db.delete(embeddings).where(eq(embeddings.nodeId, nodeId));
+}
+
+export async function stepExtractPalette(objectKey: string): Promise<Palette> {
+  "use step";
+
+  const image = await loadPaletteImage(objectKey);
+  const candidates = extractPaletteCandidates(image.pixels);
+  if (candidates.length === 0) return { scoredBy: "heuristic", colors: [] };
+
+  try {
+    return {
+      scoredBy: "model",
+      colors: await scorePaletteWithModel({
+        candidates,
+        preview: image.preview,
+      }),
+    };
+  } catch (error) {
+    // The palette is still useful without the model's judgment.
+    console.error("palette decision failed", { objectKey, error });
+    return {
+      scoredBy: "heuristic",
+      colors: scorePaletteHeuristically(candidates),
+    };
+  }
+}
+
+export async function stepUpsertPalette(params: {
+  nodeId: string;
+  sourceKey: string;
+  palette: Palette;
+}) {
+  "use step";
+
+  // Skipped when the node was deleted or its image replaced meanwhile.
+  await db.execute(sql`
+    INSERT INTO ${palettes} (
+      ${sql.identifier(palettes.nodeId.name)},
+      ${sql.identifier(palettes.boardId.name)},
+      ${sql.identifier(palettes.sourceKey.name)},
+      ${sql.identifier(palettes.scoredBy.name)},
+      ${sql.identifier(palettes.colors.name)}
+    )
+    SELECT
+      ${nodes.id},
+      ${nodes.boardId},
+      ${nodes.embeddingSource},
+      ${params.palette.scoredBy},
+      ${JSON.stringify(params.palette.colors)}::jsonb
+    FROM ${nodes}
+    WHERE ${nodes.id} = ${params.nodeId}
+      AND ${nodes.embeddingSource} = ${params.sourceKey}
+    ON CONFLICT (${sql.identifier(palettes.nodeId.name)}) DO UPDATE SET
+      ${sql.identifier(palettes.sourceKey.name)} = EXCLUDED.${sql.identifier(
+        palettes.sourceKey.name,
+      )},
+      ${sql.identifier(palettes.scoredBy.name)} = EXCLUDED.${sql.identifier(
+        palettes.scoredBy.name,
+      )},
+      ${sql.identifier(palettes.colors.name)} = EXCLUDED.${sql.identifier(
+        palettes.colors.name,
+      )},
+      ${sql.identifier(palettes.updatedAt.name)} = now()
+  `);
 }
