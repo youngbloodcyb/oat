@@ -6,6 +6,7 @@ import {
   ChatCircleIcon,
   PaletteIcon,
   PlugsIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
 import { useSidebarPanel } from "@/components/chat-sidebar-provider";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,12 @@ export function DockMenu({
       icon: ChatCircleIcon,
       onSelect: onToggleComment,
       active: commenting,
+    },
+    {
+      name: "chat",
+      icon: SparkleIcon,
+      onSelect: () => togglePanel("chat"),
+      active: isOpen && panel === "chat",
     },
     {
       name: "palette",
