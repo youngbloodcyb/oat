@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Board, BoardLoading, BoardNotFound } from "@/components/board";
 import { getBoardChat } from "@/services/board-chats";
 import { getBoard } from "@/services/boards";
+import { listBoardPalettes } from "@/services/palettes";
 import { listBoardShares } from "@/services/shares";
 
 export const instant = true;
@@ -39,6 +40,9 @@ async function BoardLoader({
   const sharesPromise = listBoardShares(id);
   chatPromise.catch(() => {});
   sharesPromise.catch(() => {});
+  // Not awaited: the palette panel reads it if opened. A failure falls back
+  // to no palettes, which the panel then fetches itself.
+  const palettesPromise = listBoardPalettes(id).catch(() => []);
   const board = await getBoard(id);
 
   if (!board) return <BoardNotFound />;
@@ -51,6 +55,7 @@ async function BoardLoader({
       board={board}
       chat={chat}
       shares={shares}
+      palettes={palettesPromise}
       focusNodeId={typeof node === "string" ? node : undefined}
     />
   );

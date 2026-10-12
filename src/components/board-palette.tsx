@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useShallow } from "zustand/react/shallow";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,21 +27,41 @@ function shownColors(colors: PaletteColor[]): PaletteColor[] {
     );
 }
 
-/** The extracted colors of each image on the board. */
-export function BoardPalette({ boardId }: { boardId: string }) {
+function byNode(rows: ImagePalette[]): Map<string, ImagePalette> {
+  return new Map(rows.map((row) => [row.nodeId, row]));
+}
+
+/**
+ * The extracted colors of each image on the board. Starts from the palettes
+ * loaded with the page, and only fetches for images that don't have one yet.
+ */
+export function BoardPalette({
+  boardId,
+  initialPalettes,
+}: {
+  boardId: string;
+  initialPalettes: Promise<ImagePalette[]>;
+}) {
   const images = useBoardStore(
     useShallow((s) =>
       s.nodes.filter((n): n is ImageNode => n.data.kind === "image"),
     ),
   );
-  const [palettes, setPalettes] = useState<Map<string, ImagePalette> | null>(
-    null,
-  );
+  const initial = use(initialPalettes);
+  const [palettes, setPalettes] = useState(() => byNode(initial));
+  // Read by the effect to decide whether to fetch, without refetching on
+  // every update it makes itself.
+  const palettesRef = useRef(palettes);
   const [stalled, setStalled] = useState(false);
   const focusNode = useFocusNode();
   const imageIds = images.map((i) => i.id).join(",");
 
   useEffect(() => {
+    const ids = imageIds ? imageIds.split(",") : [];
+    const missing = (map: Map<string, ImagePalette>) =>
+      ids.some((id) => !map.has(id));
+    if (!missing(palettesRef.current)) return;
+
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let polls = 0;
@@ -49,12 +69,11 @@ export function BoardPalette({ boardId }: { boardId: string }) {
 
     const load = async () => {
       try {
-        const rows = await listBoardPalettes(boardId);
+        const next = byNode(await listBoardPalettes(boardId));
         if (cancelled) return;
-        const next = new Map(rows.map((row) => [row.nodeId, row]));
+        palettesRef.current = next;
         setPalettes(next);
-        const ids = imageIds ? imageIds.split(",") : [];
-        if (!ids.some((id) => !next.has(id))) return;
+        if (!missing(next)) return;
         polls += 1;
         if (polls < MAX_POLLS) timer = setTimeout(load, POLL_MS);
         else setStalled(true);
@@ -81,7 +100,7 @@ export function BoardPalette({ boardId }: { boardId: string }) {
   return (
     <ul className="flex flex-col gap-1 overflow-y-auto p-2">
       {images.map((image) => {
-        const palette = palettes?.get(image.id);
+        const palette = palettes.get(image.id);
         const colors = palette ? shownColors(palette.colors) : [];
         return (
           <li

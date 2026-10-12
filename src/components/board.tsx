@@ -52,6 +52,7 @@ import { type CanvasNode, useBoardStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import type { SavedBoardChat } from "@/services/board-chats";
 import type { BoardDetail } from "@/services/boards";
+import type { ImagePalette } from "@/services/palettes";
 import type { NodeSearchResult } from "@/services/search";
 import type { BoardShareMember } from "@/services/shares";
 
@@ -389,12 +390,15 @@ export function Board({
   board,
   chat,
   shares,
+  palettes,
   focusNodeId,
 }: {
   board: BoardDetail;
   chat: SavedBoardChat | null;
   /** The board's share list; empty unless the caller owns the board. */
   shares: BoardShareMember[];
+  /** Image palettes, still loading; only read if the palette panel opens. */
+  palettes: Promise<ImagePalette[]>;
   focusNodeId?: string;
 }) {
   const canEdit = board.accessRole !== "viewer";
@@ -407,7 +411,12 @@ export function Board({
           focusNodeId={focusNodeId}
           canEdit={canEdit}
         />
-        <ChatSidebar boardId={board.id} boardName={board.name} chat={chat} />
+        <ChatSidebar
+          boardId={board.id}
+          boardName={board.name}
+          chat={chat}
+          palettes={palettes}
+        />
       </BoardPermissionsProvider>
     </ReactFlowProvider>
   );

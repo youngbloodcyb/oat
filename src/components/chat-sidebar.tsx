@@ -1,7 +1,7 @@
 "use client";
 
 import { SparkleIcon, XIcon } from "@phosphor-icons/react";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, Suspense, useEffect, useState } from "react";
 import { BoardPalette } from "@/components/board-palette";
 import { BoardChat } from "@/components/chat/board-chat";
 import { useSidebarPanel } from "@/components/chat-sidebar-provider";
@@ -16,15 +16,18 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import type { SavedBoardChat } from "@/services/board-chats";
+import type { ImagePalette } from "@/services/palettes";
 
 export function ChatSidebar({
   boardId,
   boardName,
   chat,
+  palettes,
 }: {
   boardId: string;
   boardName: string;
   chat: SavedBoardChat | null;
+  palettes: Promise<ImagePalette[]>;
 }) {
   const { toggleSidebar } = useSidebar();
   const { panel, isOpen } = useSidebarPanel();
@@ -64,7 +67,13 @@ export function ChatSidebar({
             <BoardChat boardId={boardId} boardName={boardName} saved={chat} />
           </div>
         )}
-        {panel === "palette" && isOpen && <BoardPalette boardId={boardId} />}
+        {panel === "palette" && isOpen && (
+          // The page starts loading palettes, so this only suspends if the
+          // panel opens before they arrive.
+          <Suspense fallback={null}>
+            <BoardPalette boardId={boardId} initialPalettes={palettes} />
+          </Suspense>
+        )}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
