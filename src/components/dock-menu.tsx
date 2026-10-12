@@ -1,7 +1,13 @@
 "use client";
 
 import type { Icon } from "@phosphor-icons/react";
-import { ArticleIcon, ChatCircleIcon, PlugsIcon } from "@phosphor-icons/react";
+import {
+  ArticleIcon,
+  ChatCircleIcon,
+  PaletteIcon,
+  PlugsIcon,
+} from "@phosphor-icons/react";
+import { useSidebarPanel } from "@/components/chat-sidebar-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +30,7 @@ export function DockMenu({
   commenting?: boolean;
   onToggleComment?: () => void;
 }) {
+  const { panel, isOpen, togglePanel } = useSidebarPanel();
   const menuOptions: DockMenuOption[] = [
     {
       name: "text",
@@ -35,6 +42,12 @@ export function DockMenu({
       icon: ChatCircleIcon,
       onSelect: onToggleComment,
       active: commenting,
+    },
+    {
+      name: "palette",
+      icon: PaletteIcon,
+      onSelect: () => togglePanel("palette"),
+      active: isOpen && panel === "palette",
     },
     {
       name: "settings",
