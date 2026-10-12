@@ -117,7 +117,7 @@ export function BoardPalette({
         return (
           <li
             key={image.id}
-            className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50"
+            className="flex items-start gap-3 rounded-md p-2 hover:bg-muted/50"
           >
             <button
               type="button"
@@ -135,11 +135,11 @@ export function BoardPalette({
             </button>
             {!palette ? (
               stalled ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="self-center text-xs text-muted-foreground">
                   Colors aren&rsquo;t available yet.
                 </p>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 self-center">
                   <span className="sr-only">Extracting colors</span>
                   {[0, 1, 2, 3].map((i) => (
                     <Skeleton key={i} className="size-9 rounded-md" />
@@ -147,7 +147,7 @@ export function BoardPalette({
                 </div>
               )
             ) : colors.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="self-center text-xs text-muted-foreground">
                 No brand colors found.
               </p>
             ) : (
