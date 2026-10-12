@@ -1,0 +1,162 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useFocusNode } from "@/hooks/use-focus-node";
+import type { PaletteColor, PaletteRole } from "@/lib/palette";
+import { type ImageNode, useBoardStore } from "@/lib/store";
+import { type ImagePalette, listBoardPalettes } from "@/services/palettes";
+
+// Palettes are computed in the background after an upload, so poll while
+// any image on the board is still waiting for one, for up to two minutes.
+const POLL_MS = 4_000;
+const MAX_POLLS = 30;
+
+// Backgrounds and discarded colors aren't part of the brand palette.
+const SHOWN_ROLES: PaletteRole[] = ["primary", "accent", "neutral"];
+
+function shownColors(colors: PaletteColor[]): PaletteColor[] {
+  return colors
+    .filter((c) => SHOWN_ROLES.includes(c.role))
+    .sort(
+      (x, y) =>
+        SHOWN_ROLES.indexOf(x.role) - SHOWN_ROLES.indexOf(y.role) ||
+        y.salience - x.salience,
+    );
+}
+
+/** The extracted colors of each image on the board. */
+export function BoardPalette({ boardId }: { boardId: string }) {
+  const images = useBoardStore(
+    useShallow((s) =>
+      s.nodes.filter((n): n is ImageNode => n.data.kind === "image"),
+    ),
+  );
+  const [palettes, setPalettes] = useState<Map<string, ImagePalette> | null>(
+    null,
+  );
+  const [stalled, setStalled] = useState(false);
+  const focusNode = useFocusNode();
+  const imageIds = images.map((i) => i.id).join(",");
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let polls = 0;
+    setStalled(false);
+
+    const load = async () => {
+      try {
+        const rows = await listBoardPalettes(boardId);
+        if (cancelled) return;
+        const next = new Map(rows.map((row) => [row.nodeId, row]));
+        setPalettes(next);
+        const ids = imageIds ? imageIds.split(",") : [];
+        if (!ids.some((id) => !next.has(id))) return;
+        polls += 1;
+        if (polls < MAX_POLLS) timer = setTimeout(load, POLL_MS);
+        else setStalled(true);
+      } catch {
+        if (!cancelled) toast.error("Couldn't load the board's colors");
+      }
+    };
+    void load();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [boardId, imageIds]);
+
+  if (images.length === 0) {
+    return (
+      <p className="p-4 text-sm text-muted-foreground">
+        Add images to the board to see their colors.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="flex flex-col gap-1 overflow-y-auto p-2">
+      {images.map((image) => {
+        const palette = palettes?.get(image.id);
+        const colors = palette ? shownColors(palette.colors) : [];
+        return (
+          <li
+            key={image.id}
+            className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50"
+          >
+            <button
+              type="button"
+              onClick={() => focusNode(image.id)}
+              className="size-12 shrink-0 overflow-hidden rounded-md border bg-muted"
+              aria-label={`Show ${image.data.alt || "image"} on the board`}
+            >
+              {/* biome-ignore lint/performance/noImgElement: blob/API-route URLs cannot use the Next image optimizer */}
+              <img
+                src={image.data.src}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </button>
+            {!palette ? (
+              stalled ? (
+                <p className="text-xs text-muted-foreground">
+                  Colors aren&rsquo;t available yet.
+                </p>
+              ) : (
+                <div className="flex gap-2">
+                  <span className="sr-only">Extracting colors</span>
+                  {[0, 1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="size-9 rounded-md" />
+                  ))}
+                </div>
+              )
+            ) : colors.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No brand colors found.
+              </p>
+            ) : (
+              <div className="flex min-w-0 flex-wrap gap-2">
+                {colors.map((color) => (
+                  <Swatch key={color.hex} color={color} />
+                ))}
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Swatch({ color }: { color: PaletteColor }) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(color.hex);
+      toast.success(`Copied ${color.hex}`);
+    } catch {
+      toast.error("Couldn't copy the color");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title={`${color.hex} · ${color.role}`}
+      className="flex flex-col items-center gap-1"
+    >
+      <span
+        className="size-9 rounded-md border shadow-xs"
+        style={{ backgroundColor: color.hex }}
+      />
+      <span className="font-mono text-[0.625rem] text-muted-foreground uppercase">
+        {color.hex.slice(1)}
+      </span>
+    </button>
+  );
+}
