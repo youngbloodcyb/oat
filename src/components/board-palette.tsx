@@ -142,7 +142,7 @@ export function BoardPalette({
                 <div className="flex gap-2 self-center">
                   <span className="sr-only">Extracting colors</span>
                   {[0, 1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="size-9 rounded-md" />
+                    <Skeleton key={i} className="size-8 rounded-md" />
                   ))}
                 </div>
               )
@@ -180,10 +180,10 @@ function ImageColors({ colors }: { colors: PaletteColor[] }) {
           }
           className="flex flex-col items-center gap-1"
         >
-          <span className="flex size-9 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground transition-colors hover:bg-muted">
+          <span className="flex size-8 items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground transition-colors hover:bg-muted">
             {expanded ? "−" : `+${more.length}`}
           </span>
-          <span className="text-[0.625rem] text-muted-foreground">
+          <span className="text-[0.625rem] leading-3 text-muted-foreground">
             {expanded ? "less" : "more"}
           </span>
         </button>
@@ -210,10 +210,10 @@ function Swatch({ color }: { color: PaletteColor }) {
       className="flex flex-col items-center gap-1"
     >
       <span
-        className="size-9 rounded-md border shadow-xs"
+        className="size-8 rounded-md border shadow-xs"
         style={{ backgroundColor: color.hex }}
       />
-      <span className="font-mono text-[0.625rem] text-muted-foreground uppercase">
+      <span className="font-mono text-[0.625rem] leading-3 text-muted-foreground uppercase">
         {color.hex.slice(1)}
       </span>
     </button>
