@@ -2,7 +2,9 @@
 
 import { SparkleIcon, XIcon } from "@phosphor-icons/react";
 import { type CSSProperties, useEffect, useState } from "react";
+import { BoardPalette } from "@/components/board-palette";
 import { BoardChat } from "@/components/chat/board-chat";
+import { useSidebarPanel } from "@/components/chat-sidebar-provider";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -12,6 +14,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import type { SavedBoardChat } from "@/services/board-chats";
 
 export function ChatSidebar({
@@ -23,30 +26,45 @@ export function ChatSidebar({
   boardName: string;
   chat: SavedBoardChat | null;
 }) {
-  const { open, openMobile, isMobile, toggleSidebar } = useSidebar();
-  const isOpen = isMobile ? openMobile : open;
-  // Don't open an agent stream until the chat is actually used.
-  const [hasOpened, setHasOpened] = useState(isOpen);
+  const { toggleSidebar } = useSidebar();
+  const { panel, isOpen } = useSidebarPanel();
+  const showingChat = isOpen && panel === "chat";
+  // Don't open an agent stream until the chat is actually used. Once it is,
+  // keep it mounted while the palette shows so the conversation survives.
+  const [hasOpenedChat, setHasOpenedChat] = useState(showingChat);
   useEffect(() => {
-    if (isOpen) setHasOpened(true);
-  }, [isOpen]);
+    if (showingChat) setHasOpenedChat(true);
+  }, [showingChat]);
 
   return (
     <Sidebar
       side="right"
       style={{ "--sidebar": "var(--background)" } as CSSProperties}
     >
-      <SidebarHeader className="h-10 flex-row items-center justify-end">
+      <SidebarHeader className="h-10 flex-row items-center justify-between">
+        <span className="px-2 text-sm font-medium">
+          {panel === "palette" ? "Palette" : null}
+        </span>
         <Button variant="ghost" size="icon-sm" onClick={toggleSidebar}>
           <XIcon />
-          <span className="sr-only">Close chat</span>
+          <span className="sr-only">
+            Close {panel === "palette" ? "palette" : "chat"}
+          </span>
         </Button>
       </SidebarHeader>
       <SidebarSeparator className="mx-0 w-full" />
       <SidebarContent className="gap-0 overflow-hidden">
-        {hasOpened && (
-          <BoardChat boardId={boardId} boardName={boardName} saved={chat} />
+        {hasOpenedChat && (
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col",
+              panel !== "chat" && "hidden",
+            )}
+          >
+            <BoardChat boardId={boardId} boardName={boardName} saved={chat} />
+          </div>
         )}
+        {panel === "palette" && isOpen && <BoardPalette boardId={boardId} />}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
@@ -54,13 +72,13 @@ export function ChatSidebar({
 }
 
 export function ChatSidebarTrigger({ disabled }: { disabled?: boolean }) {
-  const { toggleSidebar } = useSidebar();
+  const { togglePanel } = useSidebarPanel();
 
   return (
     <Button
       variant="outline"
       size="sm"
-      onClick={toggleSidebar}
+      onClick={() => togglePanel("chat")}
       disabled={disabled}
       aria-label="Chat"
     >
