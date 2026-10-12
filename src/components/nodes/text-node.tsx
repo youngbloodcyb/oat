@@ -13,7 +13,7 @@ export function TextNode({ id, data, selected }: NodeProps<TextNodeType>) {
     <NodeShell id={id} selected={selected} minWidth={120} minHeight={80}>
       {data.text ? (
         <div
-          className="tiptap ProseMirror h-full w-full overflow-auto p-3 text-sm"
+          className="tiptap ProseMirror h-full w-full overflow-hidden p-3 text-sm"
           // biome-ignore lint/security/noDangerouslySetInnerHtml: editor-authored HTML
           dangerouslySetInnerHTML={{ __html: data.text }}
         />
