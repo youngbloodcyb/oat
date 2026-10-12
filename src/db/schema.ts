@@ -15,6 +15,7 @@ import {
   vector,
 } from "drizzle-orm/pg-core";
 import type { MessageStreamEvent } from "eve/client";
+import type { PaletteColor } from "@/lib/palette";
 
 export type OpenGraph = {
   title?: string;
@@ -312,6 +313,29 @@ export const embeddings = pgTable(
       t.embedding.op("vector_cosine_ops"),
     ),
   ],
+);
+
+// Colors extracted from an image node, with the brand role each plays.
+export const palettes = pgTable(
+  "palettes",
+  {
+    nodeId: text("node_id")
+      .primaryKey()
+      .references(() => nodes.id, { onDelete: "cascade" }),
+    boardId: text("board_id")
+      .notNull()
+      .references(() => boards.id, { onDelete: "cascade" }),
+    // The node's embeddingSource when the palette was computed.
+    sourceKey: text("source_key").notNull(),
+    // "model" when the decision model assigned roles, "heuristic" when it
+    // was unavailable.
+    scoredBy: text("scored_by").notNull().$type<"model" | "heuristic">(),
+    colors: jsonb("colors").notNull().$type<PaletteColor[]>(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("palettes_boardId_idx").on(t.boardId)],
 );
 
 // One private agent chat per user per board.
